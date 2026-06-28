@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, ShirtIcon, PlusCircle, Sparkles, BarChart3, CalendarDays, Luggage, Heart, Camera, User, LogOut, Settings } from 'lucide-react'
+import { Home, ShirtIcon, PlusCircle, Sparkles, BarChart3, CalendarDays, Luggage, Heart, Camera, User, LogOut, Settings, Box } from 'lucide-react'
 import { useAuthStore } from '../../store/useAuthStore'
-import ProfileModal from './ProfileModal'
-
 const links = [
   { to: '/', icon: Home, label: 'Inicio' },
   { to: '/closet', icon: ShirtIcon, label: 'Mi Closet' },
   { to: '/closet/add', icon: PlusCircle, label: 'Agregar Prenda' },
   { to: '/outfit/generate', icon: Sparkles, label: 'Generar Outfit' },
+  { to: '/capsule', icon: Box, label: 'Capsule Wardrobe' },
   { to: '/calendar', icon: CalendarDays, label: 'Calendario' },
   { to: '/trips', icon: Luggage, label: 'Modo Maleta' },
   { to: '/wishlist', icon: Heart, label: 'Wishlist' },
@@ -19,7 +18,6 @@ const links = [
 export default function Sidebar() {
   const location = useLocation()
   const { profile, user, signOut } = useAuthStore()
-  const [isProfileOpen, setIsProfileOpen] = useState(false)
   
   const isAuthPage = ['/login', '/register', '/onboarding'].includes(location.pathname)
   if (isAuthPage) return null
@@ -56,8 +54,8 @@ export default function Sidebar() {
 
         {/* Profile & Logout section at bottom */}
         <div className="border-t border-border p-3 space-y-1">
-          <button
-            onClick={() => setIsProfileOpen(true)}
+          <NavLink
+            to="/profile"
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left hover:bg-bg-alt transition-all duration-200 cursor-pointer group"
           >
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden group-hover:bg-primary/20 transition-colors">
@@ -72,7 +70,7 @@ export default function Sidebar() {
               <p className="text-xs text-text-muted truncate">Editar perfil</p>
             </div>
             <Settings className="w-4 h-4 text-text-muted opacity-0 group-hover:opacity-100 transition-all" />
-          </button>
+          </NavLink>
           
           <button
             onClick={signOut}
@@ -83,8 +81,6 @@ export default function Sidebar() {
           </button>
         </div>
       </aside>
-
-      <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
     </>
   )
 }

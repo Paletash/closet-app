@@ -24,7 +24,7 @@ export function compressImage(file, maxWidth = 800, quality = 0.8) {
 
         canvas.toBlob(
           (blob) => {
-            const compressedFile = new File([blob], file.name, {
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
               type: 'image/jpeg',
               lastModified: Date.now(),
             })

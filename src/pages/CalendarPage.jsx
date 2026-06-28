@@ -47,7 +47,7 @@ function toISODate(year, month, day) {
 export default function CalendarPage() {
   const { user } = useAuthStore()
   const { outfits, fetchOutfits } = useOutfitStore()
-  const { entries, loading, fetchEntries, logUsage, removeUsage } = useCalendarStore()
+  const { entries, allEntries, loading, fetchEntries, fetchAllEntries, logUsage, removeUsage } = useCalendarStore()
 
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
@@ -55,13 +55,25 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState(null)
   const [showPicker, setShowPicker] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [viewMode, setViewMode] = useState('calendar') // 'calendar' or 'history'
 
+  // 1. Obtener outfits solo una vez cuando el usuario cambie o al montar
   useEffect(() => {
     if (user?.id) {
-      fetchEntries(user.id, year, month)
       fetchOutfits(user.id)
     }
-  }, [user?.id, year, month, fetchEntries, fetchOutfits])
+  }, [user?.id, fetchOutfits])
+
+  // 2. Obtener registros de calendario o historial
+  useEffect(() => {
+    if (user?.id) {
+      if (viewMode === 'calendar') {
+        fetchEntries(user.id, year, month)
+      } else if (viewMode === 'history') {
+        fetchAllEntries(user.id)
+      }
+    }
+  }, [user?.id, year, month, viewMode, fetchEntries, fetchAllEntries])
 
   const calendarDays = useMemo(() => getCalendarDays(year, month), [year, month])
 
@@ -134,7 +146,7 @@ export default function CalendarPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 md:py-8 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-text flex items-center gap-2">
             <CalendarDays className="w-6 h-6 text-primary" />
@@ -142,15 +154,35 @@ export default function CalendarPage() {
           </h1>
           <p className="text-sm text-text-muted mt-1">Registra lo que usas cada día</p>
         </div>
-        <button
-          onClick={goToToday}
-          className="text-xs font-semibold text-primary bg-primary/8 hover:bg-primary/15 px-3 py-1.5 rounded-full transition-colors cursor-pointer"
-        >
-          Hoy
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-surface border border-border rounded-xl p-1">
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${viewMode === 'calendar' ? 'bg-primary/10 text-primary' : 'text-text-muted hover:text-text'}`}
+            >
+              Calendario
+            </button>
+            <button
+              onClick={() => setViewMode('history')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${viewMode === 'history' ? 'bg-primary/10 text-primary' : 'text-text-muted hover:text-text'}`}
+            >
+              Historial
+            </button>
+          </div>
+          {viewMode === 'calendar' && (
+            <button
+              onClick={goToToday}
+              className="text-xs font-semibold text-primary bg-primary/8 hover:bg-primary/15 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+            >
+              Hoy
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Month Stats */}
+      {viewMode === 'calendar' && (
+        <>
+          {/* Month Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6 stagger-children">
         {[
           { label: 'Usos', value: monthStats.totalUses, color: 'bg-primary/8 text-primary' },
@@ -316,6 +348,75 @@ export default function CalendarPage() {
                 Registrar uno →
               </button>
             </div>
+          )}
+        </div>
+      )}
+        </>
+      )}
+
+      {viewMode === 'history' && (
+        <div className="space-y-4">
+          {loading && allEntries.length === 0 ? (
+            <div className="py-12"><LoadingSpinner text="Cargando historial..." /></div>
+          ) : allEntries.length > 0 ? (
+            <div className="relative pl-6 border-l-2 border-border space-y-6">
+              {allEntries.map((entry, index) => {
+                const outfit = entry.outfit
+                if (!outfit) return null
+                const ocasionObj = OCASIONES.find((o) => o.value === outfit.ocasion)
+                const dateObj = new Date(entry.fecha)
+                // Adjust for local time to avoid off-by-one day issues
+                dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset())
+
+                return (
+                  <div key={entry.id} className="relative">
+                    {/* Timeline dot */}
+                    <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-surface border-2 border-primary" />
+                    
+                    <div className="mb-2 flex items-center gap-2">
+                      <h3 className="font-bold text-text capitalize">{dateObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+                      {index === 0 && <span className="px-2 py-0.5 rounded-full bg-accent-light text-accent text-[10px] font-bold uppercase tracking-wider">Último</span>}
+                    </div>
+
+                    <div className="bg-surface rounded-2xl border border-border p-4 hover:shadow-sm transition-shadow">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {ocasionObj && (
+                            <span className="px-2.5 py-1 rounded-full bg-primary-light text-primary text-xs font-medium">
+                              {ocasionObj.icon} {ocasionObj.label}
+                            </span>
+                          )}
+                          {outfit.generado_por_ia && (
+                            <span className="text-[10px] text-accent font-medium flex items-center gap-0.5">
+                              <Sparkles className="w-3 h-3" /> IA
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex overflow-x-auto pb-2 gap-3 snap-x scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+                        {(outfit.prendas || []).map((prenda) => (
+                          <div key={prenda.id} className="w-24 h-24 shrink-0 snap-start rounded-xl overflow-hidden bg-bg-alt border border-border">
+                            <img
+                              src={prenda.foto_url}
+                              alt={prenda.subcategoria || CATEGORIAS[prenda.categoria]?.label}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              icon={CalendarDays}
+              title="Sin historial"
+              description="No has registrado ningún outfit. ¡Ve a la vista Calendario para empezar!"
+            />
           )}
         </div>
       )}

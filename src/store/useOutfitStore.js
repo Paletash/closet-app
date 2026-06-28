@@ -5,8 +5,16 @@ export const useOutfitStore = create((set, get) => ({
   outfits: [],
   loading: false,
   error: null,
+  hasFetched: false,
 
-  fetchOutfits: async (userId) => {
+  fetchOutfits: async (userId, force = false) => {
+    const currentOutfits = get().outfits
+    const isDifferentUser = currentOutfits.length > 0 && currentOutfits[0].user_id !== userId
+
+    if (get().hasFetched && !force && !isDifferentUser && currentOutfits.length > 0) {
+      return
+    }
+
     set({ loading: true, error: null })
 
     const { data, error } = await supabase
@@ -32,7 +40,7 @@ export const useOutfitStore = create((set, get) => ({
       prendas: outfit.outfit_prendas?.map((op) => op.prendas).filter(Boolean) || [],
     }))
 
-    set({ outfits: outfitsWithPrendas, loading: false })
+    set({ outfits: outfitsWithPrendas, loading: false, hasFetched: true })
   },
 
   saveOutfit: async (userId, prendaIds, ocasion, generadoPorIA = false) => {

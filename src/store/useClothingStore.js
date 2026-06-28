@@ -5,23 +5,40 @@ export const useClothingStore = create((set, get) => ({
   clothes: [],
   loading: false,
   error: null,
+  hasFetched: false,
   filters: {
     categoria: null,
     color: null,
     estilo: null,
     temporada: null,
+    tag: null,
     search: '',
+    iaMatches: null,
   },
 
   setFilters: (filters) => set((state) => ({
-    filters: { ...state.filters, ...filters }
+    filters: { ...state.filters, ...filters, iaMatches: null } // clear IA matches if manual filters are touched
+  })),
+
+  setFiltersFromVisualSearch: (data) => set((state) => ({
+    filters: {
+      categoria: null, color: null, estilo: null, temporada: null, tag: null, search: '',
+      iaMatches: data.prendas_detectadas || []
+    }
   })),
 
   clearFilters: () => set({
-    filters: { categoria: null, color: null, estilo: null, temporada: null, search: '' }
+    filters: { categoria: null, color: null, estilo: null, temporada: null, tag: null, search: '', iaMatches: null }
   }),
 
-  fetchClothes: async (userId) => {
+  fetchClothes: async (userId, force = false) => {
+    const currentClothes = get().clothes
+    const isDifferentUser = currentClothes.length > 0 && currentClothes[0].user_id !== userId
+
+    if (get().hasFetched && !force && !isDifferentUser && currentClothes.length > 0) {
+      return
+    }
+
     set({ loading: true, error: null })
     let query = supabase
       .from('prendas')
@@ -36,16 +53,32 @@ export const useClothingStore = create((set, get) => ({
       return
     }
 
-    set({ clothes: data || [], loading: false })
+    set({ clothes: data || [], loading: false, hasFetched: true })
   },
 
   getFilteredClothes: () => {
     const { clothes, filters } = get()
     return clothes.filter((item) => {
+      // Filter out non-active by default in normal views
+      const status = item.estado || 'activa'
+      if (status !== 'activa') return false
+
       if (filters.categoria && item.categoria !== filters.categoria) return false
       if (filters.color && item.color_principal !== filters.color) return false
       if (filters.estilo && !(item.estilos || []).includes(filters.estilo)) return false
       if (filters.temporada && !(item.temporadas || []).includes(filters.temporada)) return false
+      if (filters.tag && !(item.etiquetas || []).includes(filters.tag)) return false
+      if (filters.iaMatches && filters.iaMatches.length > 0) {
+        // AI match logic: Item must match at least one detected prenda's category, or color, or style.
+        // We'll require it to match the category of at least one detected garment to be relevant.
+        const matchAny = filters.iaMatches.some(detectada => {
+          if (!detectada.categoria) return false
+          const matchCat = item.categoria === detectada.categoria
+          const matchColor = detectada.color ? item.color_principal === detectada.color : true
+          return matchCat && matchColor
+        })
+        if (!matchAny) return false
+      }
       if (filters.search) {
         const search = filters.search.toLowerCase()
         const matchName = (item.subcategoria || '').toLowerCase().includes(search)
@@ -62,7 +95,10 @@ export const useClothingStore = create((set, get) => ({
 
     try {
       const userId = clothing.user_id
-      const fileExt = imageFile.name.split('.').pop()
+      let fileExt = imageFile.name.split('.').pop().toLowerCase()
+      if (!['jpg', 'jpeg', 'png', 'webp'].includes(fileExt)) {
+        fileExt = 'jpg' // Fallback seguro
+      }
       const fileName = `${userId}/${crypto.randomUUID()}.${fileExt}`
 
       console.log('[addClothing] Step 1: Uploading image...', fileName)
@@ -77,7 +113,7 @@ export const useClothingStore = create((set, get) => ({
         })
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('La subida de imagen tardó demasiado (15s). Revisa los permisos del bucket "prendas-fotos" en Supabase Storage.')), 15000)
+        setTimeout(() => reject(new Error('La subida de imagen tardó demasiado (30s). Revisa tu conexión a internet o los permisos del bucket "prendas-fotos" en Supabase Storage.')), 30000)
       )
 
       const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise])
@@ -143,19 +179,24 @@ export const useClothingStore = create((set, get) => ({
   },
 
   deleteClothing: async (id) => {
-    const { error } = await supabase
-      .from('prendas')
-      .delete()
-      .eq('id', id)
+    set({ loading: true, error: null })
+    try {
+      const { error } = await supabase
+        .from('prendas')
+        .delete()
+        .eq('id', id)
 
-    if (error) {
-      set({ error: error.message })
+      if (error) throw error
+
+      set((state) => ({
+        clothes: state.clothes.filter((c) => c.id !== id),
+        loading: false,
+      }))
+      return { success: true }
+    } catch (error) {
+      console.error('[deleteClothing] Error deleting clothing:', error)
+      set({ error: error.message, loading: false })
       return { error }
     }
-
-    set((state) => ({
-      clothes: state.clothes.filter((c) => c.id !== id),
-    }))
-    return { success: true }
   },
 }))

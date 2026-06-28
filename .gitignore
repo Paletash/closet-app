@@ -27,3 +27,8 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+supabase/.env
+supabase/.env.local
+
+# Vite PWA dev build
+dev-dist/

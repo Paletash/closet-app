@@ -3,8 +3,10 @@ import { CATEGORIAS, COLORES, ESTILOS, TEMPORADAS } from '../../utils/categories
 import { useClothingStore } from '../../store/useClothingStore'
 
 export default function ClothingFilters() {
-  const { filters, setFilters, clearFilters } = useClothingStore()
-  const hasFilters = filters.categoria || filters.color || filters.estilo || filters.temporada
+  const { filters, setFilters, clearFilters, clothes } = useClothingStore()
+  const hasFilters = filters.categoria || filters.color || filters.estilo || filters.temporada || filters.tag || (filters.iaMatches && filters.iaMatches.length > 0)
+
+  const existingTags = [...new Set(clothes.flatMap(c => c.etiquetas || []))]
 
   const FilterChip = ({ label, active, onClick }) => (
     <button
@@ -32,6 +34,20 @@ export default function ClothingFilters() {
         onChange={(e) => setFilters({ search: e.target.value })}
         className="w-full px-4 py-2.5 text-sm bg-surface border border-border rounded-xl text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
       />
+
+      {/* AI Filters */}
+      {filters.iaMatches && filters.iaMatches.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-medium text-text-muted mb-2 uppercase tracking-wider">Búsqueda Visual</p>
+          <div className="flex flex-wrap gap-2">
+            <FilterChip
+              label="✨ Resultados IA"
+              active={true}
+              onClick={() => setFilters({ iaMatches: null })}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Category filters */}
       <div>
@@ -85,6 +101,23 @@ export default function ClothingFilters() {
           ))}
         </div>
       </div>
+
+      {/* Tags */}
+      {existingTags.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-text-muted mb-2 uppercase tracking-wider">Etiquetas</p>
+          <div className="flex flex-wrap gap-2">
+            {existingTags.map(tag => (
+              <FilterChip
+                key={tag}
+                label={`#${tag}`}
+                active={filters.tag === tag}
+                onClick={() => setFilters({ tag: filters.tag === tag ? null : tag })}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Clear button */}
       {hasFilters && (

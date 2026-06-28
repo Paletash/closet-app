@@ -1,6 +1,7 @@
+import { memo } from 'react'
 import ClothingCard from './ClothingCard'
 
-export default function ClothingGrid({ clothes }) {
+const ClothingGrid = memo(function ClothingGrid({ clothes }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 stagger-children">
       {clothes.map((item) => (
@@ -8,4 +9,6 @@ export default function ClothingGrid({ clothes }) {
       ))}
     </div>
   )
-}
+})
+
+export default ClothingGrid

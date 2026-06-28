@@ -1,6 +1,5 @@
-// supabase/functions/clasificar-prenda/index.ts
-// Edge Function: Clasifica una prenda de ropa usando IA de Visión (OpenRouter)
-// Recibe una imagen en base64 y devuelve categoría, subcategoría, color y estilo detectados
+// supabase/functions/analizar-inspiracion/index.ts
+// Edge Function: Analiza una foto de inspiración y extrae categorías, colores y estilos
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -9,7 +8,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -32,39 +30,40 @@ serve(async (req) => {
       )
     }
 
-    // Vision prompt with strict category mapping
-    const prompt = `Analiza esta foto de una prenda de ropa y clasifícala.
+    const prompt = `Analiza esta foto de moda/inspiración e identifica las prendas principales visibles.
+    
+Para CADA prenda importante que veas (por ejemplo: la camiseta, los pantalones, los zapatos, una chamarra), extrae su categoría, color y estilo.
 
-CATEGORÍAS VÁLIDAS (usa EXACTAMENTE estos valores):
-- "superior" → para playeras, camisas, polos, blusas, hoodies, tank tops
-- "inferior" → para pantalones, jeans, joggers, shorts, faldas, bermudas
-- "calzado" → para tenis, zapatos, botas, sandalias, mocasines
-- "chamarra" → para chamarras, abrigos, chalecos, blazers, sudaderas con cierre, suéteres
-- "accesorio" → para gorras, relojes, lentes, bufandas, cinturones, bolsas, mochilas
+CATEGORÍAS VÁLIDAS:
+- "superior"
+- "inferior"
+- "calzado"
+- "chamarra"
+- "accesorio"
 
-SUBCATEGORÍAS VÁLIDAS por categoría:
-- superior: "playera", "camisa", "polo", "blusa", "hoodie", "tank top"
-- inferior: "pantalón", "jeans", "jogger", "short", "falda", "bermuda"
-- calzado: "tenis", "zapatos", "botas", "sandalias", "mocasines"
-- chamarra: "chamarra", "abrigo", "chaleco", "blazer", "sudadera", "sueter"
-- accesorio: "gorra", "reloj", "lentes", "bufanda", "cinturón", "bolsa", "mochila"
-
-COLORES VÁLIDOS (usa EXACTAMENTE estos valores):
+COLORES VÁLIDOS:
 "negro", "blanco", "gris", "beige", "azul", "azul_marino", "rojo", "verde", "amarillo", "naranja", "rosa", "morado", "cafe", "vino", "olivo", "coral"
 
 ESTILOS VÁLIDOS:
 "casual", "formal", "urbano", "deportivo"
 
-Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación):
+Responde ÚNICAMENTE con un JSON válido, siguiendo esta estructura exacta:
 {
-  "categoria": "valor_exacto",
-  "subcategoria": "valor_exacto",
-  "color_principal": "valor_exacto",
-  "estilos": ["estilo1"],
-  "confianza": 0.95
+  "prendas_detectadas": [
+    {
+      "categoria": "superior",
+      "color": "blanco",
+      "estilo": "casual"
+    },
+    {
+      "categoria": "inferior",
+      "color": "azul",
+      "estilo": "casual"
+    }
+  ],
+  "estilo_general": "casual"
 }`
 
-    // Multi-model fallback sequence for maximum robustness
     const models = [
       "openrouter/free",
       "meta-llama/llama-3.2-11b-vision-instruct:free",
@@ -77,14 +76,13 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación):
 
     for (const model of models) {
       try {
-        console.log(`Intentando clasificar prenda con el modelo: ${model}`)
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
             "HTTP-Referer": "https://outfitme.vercel.app",
-            "X-Title": "OutfitMe - Clasificación de Prenda"
+            "X-Title": "OutfitMe - Analizar Inspiración"
           },
           body: JSON.stringify({
             model: model,
@@ -103,14 +101,13 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación):
               }
             ],
             temperature: 0.2,
-            max_tokens: 300,
+            max_tokens: 500,
           })
         })
 
         if (res.ok) {
           response = res
           successfulModel = model
-          console.log(`Clasificación exitosa con el modelo: ${model}`)
           break
         } else {
           const errText = await res.text()
@@ -125,7 +122,7 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación):
 
     if (!response) {
       return new Response(
-        JSON.stringify({ error: `No se pudo clasificar la prenda. Errores de los modelos: ${lastError}` }),
+        JSON.stringify({ error: `No se pudo analizar la foto. Errores: ${lastError}` }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -135,41 +132,21 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación):
 
     if (!content) {
       return new Response(
-        JSON.stringify({ error: `La IA (${successfulModel}) no devolvió contenido en la respuesta.` }),
+        JSON.stringify({ error: `La IA (${successfulModel}) no devolvió contenido.` }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Parse the JSON response (handle potential markdown wrapping)
     let resultado
     try {
       const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
       resultado = JSON.parse(jsonStr)
     } catch {
-      console.error(`Error al parsear respuesta de IA (${successfulModel}):`, content)
       return new Response(
         JSON.stringify({ error: `La respuesta de la IA no tiene el formato JSON esperado.` }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-
-    // Validate that returned values are within allowed options
-    const validCategorias = ['superior', 'inferior', 'calzado', 'chamarra', 'accesorio']
-    const validColores = ['negro', 'blanco', 'gris', 'beige', 'azul', 'azul_marino', 'rojo', 'verde', 'amarillo', 'naranja', 'rosa', 'morado', 'cafe', 'vino', 'olivo', 'coral']
-    const validEstilos = ['casual', 'formal', 'urbano', 'deportivo']
-
-    if (!validCategorias.includes(resultado.categoria)) {
-      resultado.categoria = null
-    }
-    if (resultado.color_principal && !validColores.includes(resultado.color_principal)) {
-      resultado.color_principal = null
-    }
-    if (resultado.estilos) {
-      resultado.estilos = resultado.estilos.filter((e: string) => validEstilos.includes(e))
-    }
-
-    // Agregar el modelo exitoso al resultado para feedback visual si se desea
-    resultado.modelo_usado = successfulModel
 
     return new Response(
       JSON.stringify(resultado),
@@ -177,9 +154,8 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación):
     )
 
   } catch (error) {
-    console.error('Error general en la Edge Function:', error)
     return new Response(
-      JSON.stringify({ error: `Error interno de servidor: ${error.message}` }),
+      JSON.stringify({ error: `Error interno: ${error.message}` }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

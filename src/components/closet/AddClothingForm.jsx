@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Select from '../ui/Select'
+import TagInput from '../ui/TagInput'
 import { toast } from '../ui/Toast'
 import { compressImage, createPreviewUrl, revokePreviewUrl } from '../../utils/helpers'
 import { CATEGORIAS, SUBCATEGORIAS, COLORES, ESTILOS, TEMPORADAS } from '../../utils/categories'
@@ -44,8 +45,13 @@ export default function AddClothingForm() {
     estilos: [],
     temporadas: [],
     marca: '',
+    precio: '',
     notas: '',
+    etiquetas: [],
   })
+
+  // Extract unique tags from current clothes
+  const existingTags = [...new Set(useClothingStore.getState().clothes.flatMap(c => c.etiquetas || []))]
 
   const handleImageChange = async (e) => {
     const file = e.target.files?.[0]
@@ -164,9 +170,7 @@ export default function AddClothingForm() {
     console.log('Image file:', imageFile?.name, imageFile?.size, imageFile?.type)
 
     try {
-      toast.info('Comprimiendo imagen...', { autoClose: 2000 })
-      const compressedImage = await compressImage(imageFile, 800, 0.8)
-      console.log('Compressed size:', compressedImage.size)
+      toast.info('Subiendo prenda...', 2000)
 
       const result = await addClothing(
         {
@@ -177,9 +181,11 @@ export default function AddClothingForm() {
           estilos: form.estilos.length > 0 ? form.estilos : null,
           temporadas: form.temporadas.length > 0 ? form.temporadas : null,
           marca: form.marca || null,
+          precio: form.precio ? parseFloat(form.precio) : null,
           notas: form.notas || null,
+          etiquetas: form.etiquetas.length > 0 ? form.etiquetas : null,
         },
-        compressedImage
+        imageFile
       )
 
       console.log('addClothing result:', result)
@@ -385,13 +391,27 @@ export default function AddClothingForm() {
         </div>
       </div>
 
-      {/* Brand */}
-      <Input
-        label="Marca (opcional)"
-        value={form.marca}
-        onChange={(e) => setForm({ ...form, marca: e.target.value })}
-        placeholder="Nike, Zara, H&M..."
-      />
+      <div className="grid grid-cols-2 gap-4">
+        {/* Brand */}
+        <Input
+          label="Marca (opcional)"
+          value={form.marca}
+          onChange={(e) => setForm({ ...form, marca: e.target.value })}
+          placeholder="Nike, Zara, H&M..."
+        />
+
+        {/* Price */}
+        <Input
+          label="Precio (opcional)"
+          type="number"
+          step="0.01"
+          min="0"
+          value={form.precio}
+          onChange={(e) => setForm({ ...form, precio: e.target.value })}
+          placeholder="Ej: 500"
+          icon={<span className="text-text-muted">$</span>}
+        />
+      </div>
 
       {/* Notes */}
       <div className="flex flex-col gap-1.5">
@@ -404,6 +424,13 @@ export default function AddClothingForm() {
           className="w-full px-4 py-2.5 text-sm bg-surface border border-border rounded-xl text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none"
         />
       </div>
+
+      {/* Tags */}
+      <TagInput 
+        tags={form.etiquetas} 
+        onChange={(etiquetas) => setForm({ ...form, etiquetas })} 
+        existingUserTags={existingTags} 
+      />
 
       {/* Submit */}
       <Button type="submit" loading={loading} className="w-full" size="lg">

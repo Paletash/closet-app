@@ -26,13 +26,19 @@ function notify(updates) {
 
 export function toast(message, type = 'info', duration = 4000) {
   const id = ++toastId
-  const newToast = { id, message, type, duration }
+  
+  let resolvedDuration = duration
+  if (typeof duration === 'object' && duration !== null) {
+    resolvedDuration = typeof duration.autoClose === 'number' ? duration.autoClose : 4000
+  }
+
+  const newToast = { id, message, type, duration: resolvedDuration }
   notify([...toasts, newToast])
 
-  if (duration > 0) {
+  if (resolvedDuration > 0) {
     setTimeout(() => {
       notify(toasts.filter((t) => t.id !== id))
-    }, duration)
+    }, resolvedDuration)
   }
 
   return id

@@ -60,7 +60,10 @@ export const useLookStore = create((set, get) => ({
     set({ loading: true, error: null })
 
     // 1. Upload photo to storage
-    const ext = file.name.split('.').pop()
+    let ext = file.name.split('.').pop().toLowerCase()
+    if (!['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+      ext = 'jpg' // Fallback seguro
+    }
     const filePath = `${userId}/looks/${fecha}-${Date.now()}.${ext}`
 
     const { error: uploadError } = await supabase.storage

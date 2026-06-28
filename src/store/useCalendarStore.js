@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 
 export const useCalendarStore = create((set, get) => ({
   entries: [], // { id, outfit_id, fecha, outfit: { ...outfitData, prendas: [...] } }
+  allEntries: [], // For the history timeline view
   loading: false,
   error: null,
 
@@ -60,6 +61,54 @@ export const useCalendarStore = create((set, get) => ({
     }))
 
     set({ entries, loading: false })
+  },
+
+  /**
+   * Fetch all usage entries without month filter (for timeline history)
+   */
+  fetchAllEntries: async (userId, limit = 50) => {
+    set({ loading: true, error: null })
+
+    const { data, error } = await supabase
+      .from('historial_usos')
+      .select(`
+        id,
+        outfit_id,
+        fecha,
+        outfits (
+          id,
+          ocasion,
+          generado_por_ia,
+          es_favorito,
+          outfit_prendas (
+            prenda_id,
+            prendas (*)
+          )
+        )
+      `)
+      .eq('user_id', userId)
+      .order('fecha', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      set({ error: error.message, loading: false })
+      return
+    }
+
+    const allEntries = (data || []).map((entry) => ({
+      ...entry,
+      outfit: entry.outfits
+        ? {
+            ...entry.outfits,
+            prendas:
+              entry.outfits.outfit_prendas
+                ?.map((op) => op.prendas)
+                .filter(Boolean) || [],
+          }
+        : null,
+    }))
+
+    set({ allEntries, loading: false })
   },
 
   /**

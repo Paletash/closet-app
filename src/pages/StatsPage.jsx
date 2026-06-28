@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { useClothingStore } from '../store/useClothingStore'
 import { useOutfitStore } from '../store/useOutfitStore'
-import { BarChart3, ShirtIcon, Heart, Sparkles, TrendingUp, Palette, Tag, ArrowRight, Recycle, AlertTriangle } from 'lucide-react'
+import { BarChart3, ShirtIcon, Heart, Sparkles, TrendingUp, Palette, Tag, ArrowRight, Recycle, AlertTriangle, DollarSign } from 'lucide-react'
 import { CATEGORIAS, COLORES, ESTILOS } from '../utils/categories'
 
 export default function StatsPage() {
@@ -68,12 +68,40 @@ export default function StatsPage() {
       aiOutfits,
       // Sustainability
       neverUsed: clothes.filter(c => (c.veces_usado || 0) === 0),
-      leastUsed: [...clothes].filter(c => (c.veces_usado || 0) > 0).sort((a, b) => (a.veces_usado || 0) - (b.veces_usado || 0)).slice(0, 5),
       utilizationPct: clothes.length > 0
         ? Math.round((clothes.filter(c => (c.veces_usado || 0) > 0).length / clothes.length) * 100)
         : 0,
+      
+      // Investment
+      totalInvestment: clothes.reduce((sum, c) => sum + (typeof c.precio === 'number' ? c.precio : 0), 0),
+      clothesWithPrice: clothes.filter(c => typeof c.precio === 'number')
     }
   }, [clothes, outfits])
+
+  const costPerUseList = useMemo(() => {
+    return stats.clothesWithPrice.map(c => ({
+      ...c,
+      costoUso: c.precio / Math.max(1, c.veces_usado || 1)
+    }))
+  }, [stats.clothesWithPrice])
+
+  const bestRentable = useMemo(() => {
+    return [...costPerUseList]
+      .filter(c => (c.veces_usado || 0) > 0)
+      .sort((a, b) => a.costoUso - b.costoUso)
+      .slice(0, 5)
+  }, [costPerUseList])
+
+  const worstRentable = useMemo(() => {
+    return [...costPerUseList]
+      .sort((a, b) => b.costoUso - a.costoUso)
+      .slice(0, 5)
+  }, [costPerUseList])
+
+  const totalUsesFromPriced = stats.clothesWithPrice.reduce((sum, c) => sum + (c.veces_usado || 0), 0)
+  const avgCostPerUse = stats.totalInvestment > 0 && totalUsesFromPriced > 0
+    ? stats.totalInvestment / totalUsesFromPriced
+    : 0
 
   const maxCategoryCount = Math.max(...Object.values(stats.categoryCounts), 1)
 
@@ -244,11 +272,16 @@ export default function StatsPage() {
           {/* Never used clothes */}
           {stats.neverUsed.length > 0 && (
             <div className="border-t border-border/50 pt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="w-4 h-4 text-warning" />
-                <span className="text-sm font-medium text-text">
-                  {stats.neverUsed.length} prenda{stats.neverUsed.length !== 1 ? 's' : ''} sin usar
-                </span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-warning" />
+                  <span className="text-sm font-medium text-text">
+                    {stats.neverUsed.length} prenda{stats.neverUsed.length !== 1 ? 's' : ''} sin usar
+                  </span>
+                </div>
+                <Link to="/marketplace" className="text-sm text-primary font-medium hover:underline">
+                  ¿Quieres donarlas o venderlas?
+                </Link>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {stats.neverUsed.slice(0, 8).map((item) => (
@@ -270,6 +303,77 @@ export default function StatsPage() {
           )}
         </div>
       )}
+
+      {/* Investment Section */}
+      <div className="bg-surface rounded-2xl border border-border p-5 mb-6">
+        <h3 className="font-semibold text-text mb-4 flex items-center gap-2">
+          <DollarSign className="w-4 h-4 text-warning" />
+          Inversión en tu guardarropa
+        </h3>
+
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-bg-alt p-4 rounded-xl border border-border/50">
+            <p className="text-sm font-medium text-text-secondary">Inversión total</p>
+            <p className="text-2xl font-bold text-text mt-1">${stats.totalInvestment.toFixed(2)}</p>
+            <p className="text-xs text-text-muted mt-1">{stats.clothesWithPrice.length} prendas con precio</p>
+          </div>
+          <div className="bg-bg-alt p-4 rounded-xl border border-border/50">
+            <p className="text-sm font-medium text-text-secondary">Costo prom. por uso</p>
+            <p className="text-2xl font-bold text-text mt-1">${avgCostPerUse.toFixed(2)}</p>
+            <p className="text-xs text-text-muted mt-1">Basado en usos registrados</p>
+          </div>
+        </div>
+
+        {stats.clothesWithPrice.length > 0 ? (
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-sm font-semibold text-success mb-3 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" /> Más rentables
+              </p>
+              <div className="space-y-3">
+                {bestRentable.length > 0 ? bestRentable.map(item => (
+                  <Link key={item.id} to={`/closet/${item.id}`} className="flex items-center gap-3 p-2 hover:bg-bg-alt rounded-xl transition-colors">
+                    <img src={item.foto_url} className="w-12 h-12 rounded-lg object-cover bg-border" alt={item.subcategoria} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text truncate">{item.marca || item.subcategoria}</p>
+                      <p className="text-xs text-text-muted">{item.veces_usado} usos</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-success">${item.costoUso.toFixed(2)}</p>
+                      <p className="text-[10px] text-text-muted">/uso</p>
+                    </div>
+                  </Link>
+                )) : (
+                  <p className="text-sm text-text-muted">No hay prendas con usos registrados aún.</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-error mb-3 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" /> Necesitan más uso
+              </p>
+              <div className="space-y-3">
+                {worstRentable.length > 0 ? worstRentable.map(item => (
+                  <Link key={item.id} to={`/closet/${item.id}`} className="flex items-center gap-3 p-2 hover:bg-bg-alt rounded-xl transition-colors">
+                    <img src={item.foto_url} className="w-12 h-12 rounded-lg object-cover bg-border" alt={item.subcategoria} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-text truncate">{item.marca || item.subcategoria}</p>
+                      <p className="text-xs text-text-muted">{item.veces_usado || 0} usos</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-error">${item.costoUso.toFixed(2)}</p>
+                      <p className="text-[10px] text-text-muted">/uso</p>
+                    </div>
+                  </Link>
+                )) : null}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-text-muted">Agrega el precio a tus prendas para calcular tu inversión y rentabilidad.</p>
+        )}
+      </div>
 
       {/* Outfits Guardados Quick Link */}
       <div className="bg-surface rounded-2xl border border-border p-5">

@@ -58,10 +58,10 @@ export const CATEGORIAS = {
 }
 
 export const SUBCATEGORIAS = {
-  superior: ['Playera', 'Camisa', 'Polo', 'Blusa', 'Sweater', 'Hoodie', 'Tank top'],
+  superior: ['Playera', 'Camisa', 'Polo', 'Blusa', 'Hoodie', 'Tank top'],
   inferior: ['Pantalón', 'Jeans', 'Jogger', 'Short', 'Falda', 'Bermuda'],
   calzado: ['Tenis', 'Zapatos', 'Botas', 'Sandalias', 'Mocasines'],
-  chamarra: ['Chamarra', 'Abrigo', 'Chaleco', 'Blazer', 'Sudadera'],
+  chamarra: ['Chamarra', 'Abrigo', 'Chaleco', 'Blazer', 'Sudadera', 'Sueter'],
   accesorio: ['Gorra', 'Reloj', 'Lentes', 'Bufanda', 'Cinturón', 'Bolsa', 'Mochila'],
 }
 

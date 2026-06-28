@@ -15,13 +15,17 @@ const ClosetPage = lazy(() => import('./pages/ClosetPage'))
 const AddClothingPage = lazy(() => import('./pages/AddClothingPage'))
 const ClothingDetailPage = lazy(() => import('./pages/ClothingDetailPage'))
 const OutfitGeneratorPage = lazy(() => import('./pages/OutfitGeneratorPage'))
+const OutfitComparePage = lazy(() => import('./pages/OutfitComparePage'))
 const SavedOutfitsPage = lazy(() => import('./pages/SavedOutfitsPage'))
+const CapsulePage = lazy(() => import('./pages/CapsulePage'))
+const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
 const StatsPage = lazy(() => import('./pages/StatsPage'))
 const CalendarPage = lazy(() => import('./pages/CalendarPage'))
 const TripsPage = lazy(() => import('./pages/TripsPage'))
 const TripDetailPage = lazy(() => import('./pages/TripDetailPage'))
 const WishlistPage = lazy(() => import('./pages/WishlistPage'))
 const LookDelDiaPage = lazy(() => import('./pages/LookDelDiaPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 
 function OnboardingGuard({ children }) {
   const { profile, loading } = useAuthStore()
@@ -82,8 +86,17 @@ export default function App() {
           <Route path="/outfit/generate" element={
             <ProtectedRoute><OnboardingGuard><Layout><OutfitGeneratorPage /></Layout></OnboardingGuard></ProtectedRoute>
           } />
+          <Route path="/outfit/compare" element={
+            <ProtectedRoute><OnboardingGuard><Layout><OutfitComparePage /></Layout></OnboardingGuard></ProtectedRoute>
+          } />
           <Route path="/outfits" element={
             <ProtectedRoute><OnboardingGuard><Layout><SavedOutfitsPage /></Layout></OnboardingGuard></ProtectedRoute>
+          } />
+          <Route path="/capsule" element={
+            <ProtectedRoute><OnboardingGuard><Layout><CapsulePage /></Layout></OnboardingGuard></ProtectedRoute>
+          } />
+          <Route path="/marketplace" element={
+            <ProtectedRoute><OnboardingGuard><Layout><MarketplacePage /></Layout></OnboardingGuard></ProtectedRoute>
           } />
           <Route path="/stats" element={
             <ProtectedRoute><OnboardingGuard><Layout><StatsPage /></Layout></OnboardingGuard></ProtectedRoute>
@@ -102,6 +115,9 @@ export default function App() {
           } />
           <Route path="/look" element={
             <ProtectedRoute><OnboardingGuard><Layout><LookDelDiaPage /></Layout></OnboardingGuard></ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute><OnboardingGuard><Layout><ProfilePage /></Layout></OnboardingGuard></ProtectedRoute>
           } />
 
           {/* Fallback */}

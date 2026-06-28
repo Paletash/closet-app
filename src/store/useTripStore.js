@@ -7,11 +7,19 @@ export const useTripStore = create((set, get) => ({
   packedItems: [], // prenda IDs for current trip
   loading: false,
   error: null,
+  hasFetched: false,
 
   /**
    * Fetch all trips for a user
    */
-  fetchTrips: async (userId) => {
+  fetchTrips: async (userId, force = false) => {
+    const currentTrips = get().trips
+    const isDifferentUser = currentTrips.length > 0 && currentTrips[0].user_id !== userId
+
+    if (get().hasFetched && !force && !isDifferentUser && currentTrips.length > 0) {
+      return
+    }
+
     set({ loading: true, error: null })
 
     const { data, error } = await supabase
@@ -35,7 +43,7 @@ export const useTripStore = create((set, get) => ({
       prendaCount: trip.viaje_prendas?.length || 0,
     }))
 
-    set({ trips, loading: false })
+    set({ trips, loading: false, hasFetched: true })
   },
 
   /**

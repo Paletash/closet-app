@@ -81,9 +81,11 @@ export default defineConfig({
             },
           },
           {
-            // Supabase Storage images (clothing photos, avatars)
-            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
-            handler: 'CacheFirst',
+            // Supabase Storage images (clothing photos, avatars) — GET only
+            urlPattern: ({ request, url }) =>
+              request.method === 'GET' &&
+              /\.supabase\.co\/storage\/v1\/object\/public\//i.test(url.href),
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'supabase-images',
               expiration: {

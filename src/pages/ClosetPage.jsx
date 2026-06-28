@@ -1,24 +1,26 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { useClothingStore } from '../store/useClothingStore'
-import { PlusCircle, ShirtIcon, Filter } from 'lucide-react'
+import { PlusCircle, ShirtIcon, Filter, Camera } from 'lucide-react'
 import ClothingGrid from '../components/closet/ClothingGrid'
 import ClothingFilters from '../components/closet/ClothingFilters'
+import VisualSearchModal from '../components/closet/VisualSearchModal'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
-import { useState } from 'react'
 
 export default function ClosetPage() {
   const { user } = useAuthStore()
   const { clothes, loading, fetchClothes, getFilteredClothes } = useClothingStore()
+  const filters = useClothingStore((state) => state.filters)
   const [showFilters, setShowFilters] = useState(false)
+  const [showVisualSearch, setShowVisualSearch] = useState(false)
 
   useEffect(() => {
     if (user?.id) fetchClothes(user.id)
   }, [user?.id, fetchClothes])
 
-  const filtered = getFilteredClothes()
+  const filtered = useMemo(() => getFilteredClothes(), [clothes, filters])
 
   if (loading && clothes.length === 0) {
     return <LoadingSpinner size="lg" text="Cargando tu closet..." />
@@ -36,6 +38,13 @@ export default function ClosetPage() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => setShowVisualSearch(true)}
+            className="p-2.5 rounded-xl border bg-surface border-border text-text-secondary hover:text-primary hover:border-primary/30 transition-colors cursor-pointer"
+            title="Búsqueda por Foto"
+          >
+            <Camera className="w-5 h-5" />
+          </button>
+          <button
             onClick={() => setShowFilters(!showFilters)}
             className={`
               p-2.5 rounded-xl border transition-colors cursor-pointer
@@ -44,6 +53,7 @@ export default function ClosetPage() {
                 : 'bg-surface border-border text-text-secondary hover:text-text'
               }
             `}
+            title="Filtros"
           >
             <Filter className="w-5 h-5" />
           </button>
@@ -80,6 +90,12 @@ export default function ClosetPage() {
           onAction={() => window.location.href = '/closet/add'}
         />
       )}
+
+      {/* Visual Search Modal */}
+      <VisualSearchModal 
+        isOpen={showVisualSearch} 
+        onClose={() => setShowVisualSearch(false)} 
+      />
     </div>
   )
 }

@@ -50,8 +50,9 @@ export const compressImage = (file, maxWidthOrHeight = 1080, quality = 0.8) => {
         
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Intentar usar webp si el navegador lo soporta, sino jpeg
+        // Forzar JPEG debido a políticas de almacenamiento de Supabase
         const mimeType = 'image/jpeg';
+        const extension = '.jpg';
         
         canvas.toBlob(
           (blob) => {
@@ -60,7 +61,7 @@ export const compressImage = (file, maxWidthOrHeight = 1080, quality = 0.8) => {
               return;
             }
             // Crear un nuevo File a partir del Blob comprimido
-            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
+            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, extension), {
               type: mimeType,
               lastModified: Date.now(),
             });

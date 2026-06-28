@@ -7,6 +7,7 @@ import { formatDate } from '../utils/helpers'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { toast } from '../components/ui/Toast'
+import ShareOutfitButton from '../components/outfit/ShareOutfitButton'
 
 export default function SavedOutfitsPage() {
   const { user } = useAuthStore()
@@ -46,7 +47,8 @@ export default function SavedOutfitsPage() {
                     )}
                     <span className="text-xs text-text-muted">{formatDate(outfit.creado_en)}</span>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 items-center">
+                    <ShareOutfitButton prendas={outfit.prendas} ocasion={outfit.ocasion} className="!p-1.5 !bg-transparent text-text-muted hover:text-primary !border-none shadow-none hover:shadow-none min-h-0 min-w-0" />
                     <button onClick={() => toggleFavorite(outfit.id)}
                       className={`p-1.5 rounded-lg transition-colors cursor-pointer ${outfit.es_favorito ? 'text-error' : 'text-text-muted hover:text-error'}`}>
                       <Heart className={`w-4 h-4 ${outfit.es_favorito ? 'fill-current' : ''}`} />

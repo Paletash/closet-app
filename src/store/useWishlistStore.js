@@ -5,11 +5,19 @@ export const useWishlistStore = create((set, get) => ({
   items: [],
   loading: false,
   error: null,
+  hasFetched: false,
 
   /**
    * Fetch all wishlist items for a user
    */
-  fetchItems: async (userId) => {
+  fetchItems: async (userId, force = false) => {
+    const currentItems = get().items
+    const isDifferentUser = currentItems.length > 0 && currentItems[0].user_id !== userId
+
+    if (get().hasFetched && !force && !isDifferentUser && currentItems.length > 0) {
+      return
+    }
+
     set({ loading: true, error: null })
 
     const { data, error } = await supabase
@@ -23,7 +31,7 @@ export const useWishlistStore = create((set, get) => ({
       return
     }
 
-    set({ items: data || [], loading: false })
+    set({ items: data || [], loading: false, hasFetched: true })
   },
 
   /**

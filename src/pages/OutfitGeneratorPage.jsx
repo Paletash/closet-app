@@ -4,16 +4,19 @@ import { useClothingStore } from '../store/useClothingStore'
 import { useOutfitStore } from '../store/useOutfitStore'
 import { useWeather } from '../hooks/useWeather'
 import { generateOutfits } from '../lib/outfitEngine'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Sparkles, RefreshCw, Save, ChevronLeft, ChevronRight, Zap, Cpu, MessageSquare, Lightbulb } from 'lucide-react'
+import { Sparkles, RefreshCw, Save, ChevronLeft, ChevronRight, Zap, Cpu, MessageSquare, Lightbulb, Layers } from 'lucide-react'
 import { OCASIONES, TEMPORADAS, CATEGORIAS, COLORES } from '../utils/categories'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import WeatherCard from '../components/weather/WeatherCard'
 import { toast } from '../components/ui/Toast'
+import ShareOutfitButton from '../components/outfit/ShareOutfitButton'
 
 export default function OutfitGeneratorPage() {
+  const navigate = useNavigate()
   const { user, profile } = useAuthStore()
   const { clothes, fetchClothes } = useClothingStore()
   const { saveOutfit } = useOutfitStore()
@@ -54,7 +57,7 @@ export default function OutfitGeneratorPage() {
       })
 
       if (error) throw error
-      if (data?.fallback) throw new Error('Fallback requested')
+      if (data?.fallback) throw new Error(`Fallback: ${data?.error || 'Desconocido'} - Detalles: ${data?.details || 'N/A'}`)
       if (data?.error) throw new Error(data.error)
 
       // Map AI-selected IDs to actual clothes
@@ -81,9 +84,15 @@ export default function OutfitGeneratorPage() {
   }
 
   const generateWithRules = () => {
-    const res = generateOutfits(clothes, { ocasion, temporada }, 3)
+    const res = generateOutfits(clothes, { ocasion, temporada }, 3, weather)
     setResults(res)
-    setAiResponse(null)
+    // El motor local ahora genera explicaciones automáticas
+    if (res.outfits?.length > 0) {
+      const first = res.outfits[0]
+      setAiResponse({ razon: first.razon, tip_estilo: first.tip_estilo })
+    } else {
+      setAiResponse(null)
+    }
     setCurrentIdx(0)
     if (res.error) toast.warning(res.error)
   }
@@ -226,15 +235,9 @@ export default function OutfitGeneratorPage() {
                 <div className="bg-surface rounded-2xl border border-border p-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-text">Tu outfit</h3>
-                    {aiResponse ? (
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary flex items-center gap-1">
-                        <Zap className="w-3 h-3" /> Generado por IA
-                      </span>
-                    ) : (
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-success-light text-success">
-                        {Math.round(currentOutfit.score * 100)}% compatible
-                      </span>
-                    )}
+                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-success-light text-success">
+                      {Math.round(currentOutfit.score * 100)}% compatible
+                    </span>
                   </div>
 
                   {/* Clothes grid */}
@@ -253,27 +256,40 @@ export default function OutfitGeneratorPage() {
                     })}
                   </div>
 
-                  {/* AI Explanation */}
-                  {aiResponse && (
+                  {/* Outfit Explanation */}
+                  {(currentOutfit.razon || currentOutfit.tip_estilo) && (
                     <div className="space-y-3 mb-5">
-                      {aiResponse.razon && (
+                      {currentOutfit.razon && (
                         <div className="flex gap-2.5 p-3 bg-primary/5 rounded-xl border border-primary/10">
                           <MessageSquare className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                          <p className="text-sm text-text-secondary">{aiResponse.razon}</p>
+                          <p className="text-sm text-text-secondary">{currentOutfit.razon}</p>
                         </div>
                       )}
-                      {aiResponse.tip_estilo && (
+                      {currentOutfit.tip_estilo && (
                         <div className="flex gap-2.5 p-3 bg-accent-light rounded-xl border border-accent/10">
                           <Lightbulb className="w-4 h-4 text-accent shrink-0 mt-0.5" />
-                          <p className="text-sm text-text-secondary">{aiResponse.tip_estilo}</p>
+                          <p className="text-sm text-text-secondary">{currentOutfit.tip_estilo}</p>
                         </div>
                       )}
                     </div>
                   )}
 
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Button variant="secondary" onClick={handleGenerate} icon={RefreshCw} className="flex-1">Regenerar</Button>
+                    <ShareOutfitButton prendas={currentOutfit.items} ocasion={ocasion} className="flex-1" />
                     <Button onClick={handleSave} loading={saving} icon={Save} className="flex-1">Guardar</Button>
+                  </div>
+                  
+                  {/* Swipe Mode Button */}
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => navigate('/outfit/compare', { state: { outfits: results.outfits } })} 
+                      icon={Layers} 
+                      className="w-full"
+                    >
+                      Modo Swipe (Comparador)
+                    </Button>
                   </div>
                 </div>
               )}

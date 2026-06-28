@@ -49,6 +49,37 @@
   --animate-bounce-in: bounce-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ── Dark Mode Tokens ── */
+.dark {
+  --color-bg: #0F172A;
+  --color-bg-alt: #1E293B;
+  --color-surface: #1E293B;
+  --color-surface-hover: #334155;
+
+  --color-border: #334155;
+  --color-border-light: #1E293B;
+
+  --color-text: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+  --color-text-inverse: #0F172A;
+
+  --color-primary: #818CF8;
+  --color-primary-hover: #6366F1;
+  --color-primary-light: #312E81;
+  --color-primary-ghost: rgba(129, 140, 248, 0.15);
+
+  --color-accent: #F472B6;
+  --color-accent-light: #831843;
+
+  --color-success: #34D399;
+  --color-success-light: #064E3B;
+  --color-warning: #FBBF24;
+  --color-warning-light: #78350F;
+  --color-error: #F87171;
+  --color-error-light: #7F1D1D;
+}
+
 /* ── Base ── */
 *,
 *::before,
@@ -158,6 +189,9 @@ body {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+.dark .glass {
+  background: rgba(30, 41, 59, 0.8);
 }
 
 /* Safe areas (iOS notch, Dynamic Island, home indicator) */

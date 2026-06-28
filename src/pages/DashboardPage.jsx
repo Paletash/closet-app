@@ -8,6 +8,8 @@ import { PlusCircle, Sparkles, ShirtIcon, Heart, ArrowRight, BarChart3, Zap, Cal
 import { getGreeting } from '../utils/helpers'
 import { CATEGORIAS } from '../utils/categories'
 import WeatherCard from '../components/weather/WeatherCard'
+import NotificationPrompt from '../components/ui/NotificationPrompt'
+import { startNotificationScheduler, stopNotificationScheduler } from '../utils/notificationScheduler'
 
 export default function DashboardPage() {
   const { user, profile } = useAuthStore()
@@ -21,6 +23,13 @@ export default function DashboardPage() {
       fetchOutfits(user.id)
     }
   }, [user?.id, fetchClothes, fetchOutfits])
+
+  useEffect(() => {
+    if (weather) {
+      startNotificationScheduler(weather)
+    }
+    return () => stopNotificationScheduler()
+  }, [weather])
 
   const greeting = getGreeting()
   const recentClothes = clothes.slice(0, 4)
@@ -38,8 +47,8 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Weather Widget */}
-      <div className="mb-6">
+      {/* Weather Widget & Notifications */}
+      <div className="mb-6 space-y-3">
         <WeatherCard
           weather={weather}
           loading={weatherLoading}
@@ -47,6 +56,7 @@ export default function DashboardPage() {
           locationDenied={locationDenied}
           onRefresh={refetchWeather}
         />
+        <NotificationPrompt />
       </div>
 
       {/* Stats */}

@@ -16,9 +16,16 @@ serve(async (req) => {
   try {
     const { lat, lon } = await req.json()
 
-    if (!lat || !lon) {
+    if (lat === undefined || lon === undefined) {
       return new Response(
         JSON.stringify({ error: 'Coordenadas no proporcionadas' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (typeof lat !== 'number' || typeof lon !== 'number' || isNaN(lat) || isNaN(lon)) {
+      return new Response(
+        JSON.stringify({ error: 'Coordenadas inválidas. Deben ser numéricas.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
