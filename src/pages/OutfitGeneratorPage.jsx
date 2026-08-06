@@ -242,18 +242,15 @@ export default function OutfitGeneratorPage() {
 
                   {/* Clothes grid */}
                   <div className="grid grid-cols-3 gap-3 mb-5">
-                    {currentOutfit.items.map((item) => {
-                      const colorObj = COLORES.find(c => c.value === item.color_principal)
-                      return (
-                        <div key={item.id} className="text-center">
-                          <div className="aspect-square rounded-xl overflow-hidden bg-bg-alt border border-border mb-2">
-                            <img src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" />
-                          </div>
-                          <p className="text-xs font-medium text-text truncate">{item.subcategoria || CATEGORIAS[item.categoria]?.label}</p>
-                          <p className="text-[10px] text-text-muted">{CATEGORIAS[item.categoria]?.label}</p>
+                    {currentOutfit.items.map((item) => (
+                      <div key={item.id} className="text-center">
+                        <div className="aspect-square rounded-xl overflow-hidden bg-bg-alt border border-border mb-2">
+                          <img src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" />
                         </div>
-                      )
-                    })}
+                        <p className="text-xs font-medium text-text truncate">{item.subcategoria || CATEGORIAS[item.categoria]?.label}</p>
+                        <p className="text-[10px] text-text-muted">{CATEGORIAS[item.categoria]?.label}</p>
+                      </div>
+                    ))}
                   </div>
 
                   {/* Outfit Explanation */}

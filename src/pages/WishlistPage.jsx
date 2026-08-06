@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useWishlistStore } from '../store/useWishlistStore'
 import {
-  Heart, Plus, Trash2, ExternalLink, Check, ShoppingBag,
-  Tag, Star, ArrowUpDown, CheckCircle2, Circle
+  Heart, Plus, Trash2, ExternalLink, ShoppingBag,
+  Tag, ArrowUpDown, CheckCircle2, Circle
 } from 'lucide-react'
 import { CATEGORIAS } from '../utils/categories'
 import Button from '../components/ui/Button'

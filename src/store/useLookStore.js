@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 
-export const useLookStore = create((set, get) => ({
+export const useLookStore = create((set) => ({
   looks: [],
   loading: false,
   error: null,

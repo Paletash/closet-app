@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Box, SlidersHorizontal, Info, Shirt, Shuffle, Layers } from 'lucide-react'
+import { Box, SlidersHorizontal, Info, Shuffle, Layers } from 'lucide-react'
 import { useClothingStore } from '../store/useClothingStore'
 import { generateCapsule } from '../lib/capsuleEngine'
 import { TEMPORADAS, CATEGORIAS } from '../utils/categories'

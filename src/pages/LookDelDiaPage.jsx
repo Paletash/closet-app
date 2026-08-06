@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useLookStore } from '../store/useLookStore'
-import { Camera, Plus, Trash2, Calendar, Image, MessageSquare, X } from 'lucide-react'
+import { Camera, Plus, Trash2, Calendar, MessageSquare, X } from 'lucide-react'
 import { compressImage } from '../utils/helpers'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'

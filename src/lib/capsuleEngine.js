@@ -1,4 +1,3 @@
-import { colorCompatibility, styleCompatibility } from '../utils/colors'
 
 const NEUTRAL_COLORS = ['negro', 'blanco', 'gris', 'beige', 'azul_marino']
 

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { useClothingStore } from './useClothingStore'
 import { toast } from '../components/ui/Toast'
 
-export const useMarketplaceStore = create((set, get) => ({
+export const useMarketplaceStore = create((set) => ({
   loading: false,
 
   markForSale: async (prendaId, precio, plataforma) => {

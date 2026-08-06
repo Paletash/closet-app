@@ -114,7 +114,7 @@ export const useTripStore = create((set, get) => ({
   /**
    * Delete a trip
    */
-  deleteTrip: async (tripId, userId) => {
+  deleteTrip: async (tripId) => {
     const { error } = await supabase
       .from('viajes')
       .delete()

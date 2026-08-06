@@ -55,7 +55,7 @@ export default function MarketplacePage() {
     </div>
   )
 
-  const renderGrid = (items, emptyMessage, isActionable = false) => {
+  const renderGrid = (items, emptyMessage) => {
     if (items.length === 0) {
       return (
         <div className="text-center py-12 px-4 bg-surface border border-border rounded-2xl">

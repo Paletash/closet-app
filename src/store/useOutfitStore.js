@@ -84,7 +84,7 @@ export const useOutfitStore = create((set, get) => ({
     }
   },
 
-  deleteOutfit: async (id, userId) => {
+  deleteOutfit: async (id) => {
     const { error } = await supabase
       .from('outfits')
       .delete()

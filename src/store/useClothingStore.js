@@ -20,12 +20,12 @@ export const useClothingStore = create((set, get) => ({
     filters: { ...state.filters, ...filters, iaMatches: null } // clear IA matches if manual filters are touched
   })),
 
-  setFiltersFromVisualSearch: (data) => set((state) => ({
+  setFiltersFromVisualSearch: (data) => set({
     filters: {
       categoria: null, color: null, estilo: null, temporada: null, tag: null, search: '',
       iaMatches: data.prendas_detectadas || []
     }
-  })),
+  }),
 
   clearFilters: () => set({
     filters: { categoria: null, color: null, estilo: null, temporada: null, tag: null, search: '', iaMatches: null }

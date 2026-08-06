@@ -216,7 +216,7 @@ export const SUBCATEGORIA_RULES = {
 /**
  * Check subcategory clashes (combinaciones que un estilista evitaría)
  */
-export function subcategoriaClash(sub1, cat1, sub2, cat2) {
+export function subcategoriaClash(sub1, sub2) {
   // Sandalias con jogger/pantalón formal
   if (sub1 === 'Sandalias' && ['Jogger', 'Pantalón'].includes(sub2)) return true
   if (sub2 === 'Sandalias' && ['Jogger', 'Pantalón'].includes(sub1)) return true

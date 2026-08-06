@@ -2,7 +2,6 @@ import {
   colorCompatibility,
   styleCompatibility,
   ocasionToEstilos,
-  isNeutral,
   subcategoriaClash,
   subcategoriaSynergy,
 } from '../utils/colors'
@@ -235,7 +234,6 @@ function generateCandidates(groups, weather, maxCandidates = 200) {
   const bottoms = groups.inferior.slice(0, 8)
   const shoes = groups.calzado.slice(0, 6)
   const jackets = groups.chamarra || []
-  const accessories = groups.accesorio || []
 
   for (const top of tops) {
     for (const bottom of bottoms) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeft, X, Heart, Share2 } from 'lucide-react'
+import { ArrowLeft, X, Heart } from 'lucide-react'
 import OutfitSwipeCard from '../components/outfit/OutfitSwipeCard'
 import Button from '../components/ui/Button'
 import { useOutfitStore } from '../store/useOutfitStore'
@@ -11,7 +11,7 @@ export default function OutfitComparePage() {
   const navigate = useNavigate()
   const { saveOutfit } = useOutfitStore()
   
-  const [outfits, setOutfits] = useState(location.state?.outfits || [])
+  const [outfits] = useState(location.state?.outfits || [])
   const [currentIndex, setCurrentIndex] = useState(0)
 
   useEffect(() => {
