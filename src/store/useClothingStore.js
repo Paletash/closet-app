@@ -14,6 +14,7 @@ export const useClothingStore = create((set, get) => ({
     tag: null,
     search: '',
     iaMatches: null,
+    limpieza: null, // null = todas, 'limpia' = solo limpias, 'sucia' = solo sucias
   },
 
   setFilters: (filters) => set((state) => ({
@@ -23,12 +24,12 @@ export const useClothingStore = create((set, get) => ({
   setFiltersFromVisualSearch: (data) => set({
     filters: {
       categoria: null, color: null, estilo: null, temporada: null, tag: null, search: '',
-      iaMatches: data.prendas_detectadas || []
+      iaMatches: data.prendas_detectadas || [], limpieza: null
     }
   }),
 
   clearFilters: () => set({
-    filters: { categoria: null, color: null, estilo: null, temporada: null, tag: null, search: '', iaMatches: null }
+    filters: { categoria: null, color: null, estilo: null, temporada: null, tag: null, search: '', iaMatches: null, limpieza: null }
   }),
 
   fetchClothes: async (userId, force = false) => {
@@ -63,14 +64,16 @@ export const useClothingStore = create((set, get) => ({
       const status = item.estado || 'activa'
       if (status !== 'activa') return false
 
+      // Limpieza filter
+      if (filters.limpieza === 'limpia' && item.sucia === true) return false
+      if (filters.limpieza === 'sucia' && item.sucia !== true) return false
+
       if (filters.categoria && item.categoria !== filters.categoria) return false
       if (filters.color && item.color_principal !== filters.color) return false
       if (filters.estilo && !(item.estilos || []).includes(filters.estilo)) return false
       if (filters.temporada && !(item.temporadas || []).includes(filters.temporada)) return false
       if (filters.tag && !(item.etiquetas || []).includes(filters.tag)) return false
       if (filters.iaMatches && filters.iaMatches.length > 0) {
-        // AI match logic: Item must match at least one detected prenda's category, or color, or style.
-        // We'll require it to match the category of at least one detected garment to be relevant.
         const matchAny = filters.iaMatches.some(detectada => {
           if (!detectada.categoria) return false
           const matchCat = item.categoria === detectada.categoria
@@ -88,6 +91,40 @@ export const useClothingStore = create((set, get) => ({
       }
       return true
     })
+  },
+
+  /**
+   * Returns only clean, active clothes (for outfit generation)
+   */
+  getCleanClothes: () => {
+    const { clothes } = get()
+    return clothes.filter(item => {
+      const status = item.estado || 'activa'
+      return status === 'activa' && item.sucia !== true
+    })
+  },
+
+  /**
+   * Toggle dirty/clean status for a clothing item
+   */
+  toggleDirty: async (id, sucia) => {
+    // Optimistic update
+    set((state) => ({
+      clothes: state.clothes.map((c) => (c.id === id ? { ...c, sucia } : c)),
+    }))
+
+    const { error } = await supabase
+      .from('prendas')
+      .update({ sucia })
+      .eq('id', id)
+
+    if (error) {
+      // Rollback on failure
+      set((state) => ({
+        clothes: state.clothes.map((c) => (c.id === id ? { ...c, sucia: !sucia } : c)),
+      }))
+      console.error('[toggleDirty] Error:', error)
+    }
   },
 
   addClothing: async (clothing, imageFile) => {

@@ -1,14 +1,18 @@
+/// <reference path="../deno.d.ts" />
 // supabase/functions/clasificar-prenda/index.ts
 // Edge Function: Clasifica una prenda de ropa usando IA de Visión (OpenRouter)
 // Recibe una imagen en base64 y devuelve categoría, subcategoría, color y estilo detectados
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+// Declare Deno to satisfy TypeScript language server in any IDE configuration
+declare const Deno: any;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -117,8 +121,8 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación):
           lastError = `Modelo ${model} devolvió estado ${res.status}: ${errText}`
           console.warn(lastError)
         }
-      } catch (err) {
-        lastError = `Error de fetch para el modelo ${model}: ${err.message}`
+      } catch (err: any) {
+        lastError = `Error de fetch para el modelo ${model}: ${err?.message || err}`
         console.error(lastError)
       }
     }
@@ -176,10 +180,10 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación):
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error general en la Edge Function:', error)
     return new Response(
-      JSON.stringify({ error: `Error interno de servidor: ${error.message}` }),
+      JSON.stringify({ error: `Error interno de servidor: ${error?.message || error}` }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

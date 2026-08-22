@@ -24,34 +24,61 @@ const COLOR_WHEEL = {
 
 // Paletas de color curadas (combinaciones probadas en moda profesional)
 const CURATED_PALETTES = [
-  // Clásicas
+  // ── Clásicas ──
   ['negro', 'blanco'],
   ['azul_marino', 'blanco'],
   ['gris', 'azul_marino'],
   ['beige', 'azul_marino'],
   ['negro', 'gris'],
-  // Tierra
+  ['negro', 'beige'],
+  ['blanco', 'beige'],
+  ['gris', 'blanco'],
+
+  // ── Tierra ──
   ['cafe', 'beige'],
   ['olivo', 'beige'],
   ['cafe', 'blanco'],
   ['vino', 'beige'],
-  // Vibrantes
+  ['cafe', 'negro'],
+  ['olivo', 'negro'],
+  ['vino', 'negro'],
+  ['cafe', 'gris'],
+  ['olivo', 'cafe'],
+
+  // ── Vibrantes con neutros ──
   ['azul_marino', 'rojo'],
   ['blanco', 'rojo'],
   ['negro', 'rojo'],
   ['gris', 'rosa'],
   ['azul_marino', 'amarillo'],
   ['blanco', 'azul'],
-  // Tonos fríos
+  ['negro', 'verde'],
+  ['negro', 'morado'],
+  ['negro', 'azul'],
+  ['negro', 'rosa'],
+  ['blanco', 'verde'],
+  ['blanco', 'rosa'],
+  ['blanco', 'coral'],
+  ['gris', 'morado'],
+  ['gris', 'azul'],
+  ['gris', 'verde'],
+  ['beige', 'verde'],
+  ['beige', 'azul'],
+  ['beige', 'rosa'],
+
+  // ── Tonos fríos entre sí ──
   ['azul', 'gris'],
-  ['verde', 'negro'],
-  ['morado', 'gris'],
   ['azul_marino', 'verde'],
-  // Tonos cálidos
+  ['azul', 'verde'],
+  ['morado', 'azul_marino'],
+
+  // ── Tonos cálidos entre sí ──
   ['naranja', 'azul_marino'],
   ['coral', 'blanco'],
   ['amarillo', 'gris'],
   ['rosa', 'azul_marino'],
+  ['coral', 'azul_marino'],
+  ['vino', 'rosa'],
 ]
 
 // Combinaciones que un estilista profesional evitaría
@@ -62,6 +89,8 @@ const COLOR_CLASHES = [
   ['verde', 'rojo'],     // Navidad
   ['morado', 'amarillo'], // Demasiado chillón
   ['verde', 'naranja'],
+  ['naranja', 'morado'],
+  ['rojo', 'morado'],
 ]
 
 /**
@@ -231,6 +260,9 @@ export function subcategoriaClash(sub1, sub2) {
   // Tank top con blazer
   if ((sub1 === 'Tank top' && sub2 === 'Blazer') || (sub2 === 'Tank top' && sub1 === 'Blazer')) return true
 
+  // Sudadera con blazer
+  if ((sub1 === 'Sudadera' && sub2 === 'Blazer') || (sub2 === 'Sudadera' && sub1 === 'Blazer')) return true
+
   return false
 }
 
@@ -241,23 +273,31 @@ export function subcategoriaSynergy(items) {
   let bonus = 0
   const subs = items.map(i => i.subcategoria).filter(Boolean)
 
-  // Camisa + Pantalón + Zapatos = look ejecutivo
+  // ── Looks ejecutivos ──
   if (subs.includes('Camisa') && subs.includes('Pantalón') && subs.includes('Zapatos')) bonus += 0.15
+  if (subs.includes('Camisa') && subs.includes('Pantalón') && subs.includes('Mocasines')) bonus += 0.14
+  if (subs.includes('Blusa') && subs.includes('Falda') && subs.includes('Zapatos')) bonus += 0.14
 
-  // Camisa + Jeans + Tenis = smart casual perfecto
+  // ── Looks smart-casual ──
   if (subs.includes('Camisa') && subs.includes('Jeans') && subs.includes('Tenis')) bonus += 0.12
-
-  // Playera + Jeans + Tenis = clásico casual
-  if (subs.includes('Playera') && subs.includes('Jeans') && subs.includes('Tenis')) bonus += 0.10
-
-  // Polo + Pantalón + Mocasines = preppy
   if (subs.includes('Polo') && subs.includes('Pantalón') && subs.includes('Mocasines')) bonus += 0.12
+  if (subs.includes('Polo') && subs.includes('Jeans') && subs.includes('Tenis')) bonus += 0.11
+  if (subs.includes('Blusa') && subs.includes('Jeans') && subs.includes('Botas')) bonus += 0.11
 
-  // Blazer + Camisa = upgrade automático
+  // ── Looks casual clásicos ──
+  if (subs.includes('Playera') && subs.includes('Jeans') && subs.includes('Tenis')) bonus += 0.10
+  if (subs.includes('Playera') && subs.includes('Short') && subs.includes('Sandalias')) bonus += 0.10
+  if (subs.includes('Playera') && subs.includes('Bermuda') && subs.includes('Tenis')) bonus += 0.10
+
+  // ── Capas que elevan ──
   if (subs.includes('Blazer') && subs.includes('Camisa')) bonus += 0.10
+  if (subs.includes('Sueter') && subs.includes('Camisa')) bonus += 0.08
+  if (subs.includes('Chaleco') && subs.includes('Camisa')) bonus += 0.08
 
-  // Hoodie + Jogger + Tenis = streetwear coherente
+  // ── Streetwear / Deportivo ──
   if (subs.includes('Hoodie') && subs.includes('Jogger') && subs.includes('Tenis')) bonus += 0.10
+  if (subs.includes('Sudadera') && subs.includes('Jogger') && subs.includes('Tenis')) bonus += 0.10
 
   return Math.min(bonus, 0.2) // Cap máximo
 }
+

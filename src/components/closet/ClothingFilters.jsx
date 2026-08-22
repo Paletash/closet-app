@@ -4,9 +4,10 @@ import { useClothingStore } from '../../store/useClothingStore'
 
 export default function ClothingFilters() {
   const { filters, setFilters, clearFilters, clothes } = useClothingStore()
-  const hasFilters = filters.categoria || filters.color || filters.estilo || filters.temporada || filters.tag || (filters.iaMatches && filters.iaMatches.length > 0)
+  const hasFilters = filters.categoria || filters.color || filters.estilo || filters.temporada || filters.tag || filters.limpieza || (filters.iaMatches && filters.iaMatches.length > 0)
 
   const existingTags = [...new Set(clothes.flatMap(c => c.etiquetas || []))]
+  const dirtyCount = clothes.filter(c => c.sucia === true && (c.estado || 'activa') === 'activa').length
 
   const FilterChip = ({ label, active, onClick }) => (
     <button
@@ -61,6 +62,23 @@ export default function ClothingFilters() {
               onClick={() => setFilters({ categoria: filters.categoria === key ? null : key })}
             />
           ))}
+        </div>
+      </div>
+
+      {/* Limpieza filter */}
+      <div>
+        <p className="text-xs font-medium text-text-muted mb-2 uppercase tracking-wider">Estado de limpieza</p>
+        <div className="flex flex-wrap gap-2">
+          <FilterChip
+            label="✨ Limpias"
+            active={filters.limpieza === 'limpia'}
+            onClick={() => setFilters({ limpieza: filters.limpieza === 'limpia' ? null : 'limpia' })}
+          />
+          <FilterChip
+            label={`🧺 Sucias${dirtyCount > 0 ? ` (${dirtyCount})` : ''}`}
+            active={filters.limpieza === 'sucia'}
+            onClick={() => setFilters({ limpieza: filters.limpieza === 'sucia' ? null : 'sucia' })}
+          />
         </div>
       </div>
 

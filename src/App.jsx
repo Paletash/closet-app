@@ -26,6 +26,7 @@ const TripDetailPage = lazy(() => import('./pages/TripDetailPage'))
 const WishlistPage = lazy(() => import('./pages/WishlistPage'))
 const LookDelDiaPage = lazy(() => import('./pages/LookDelDiaPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 
 function OnboardingGuard({ children }) {
   const { profile, loading } = useAuthStore()
@@ -64,6 +65,7 @@ export default function App() {
           {/* Public routes */}
           <Route path="/login" element={session ? <Navigate to="/" replace /> : <LoginPage />} />
           <Route path="/register" element={session ? <Navigate to="/" replace /> : <RegisterPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Onboarding */}
           <Route path="/onboarding" element={

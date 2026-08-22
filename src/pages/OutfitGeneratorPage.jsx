@@ -7,7 +7,7 @@ import { generateOutfits } from '../lib/outfitEngine'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Sparkles, RefreshCw, Save, ChevronLeft, ChevronRight, Zap, Cpu, MessageSquare, Lightbulb, Layers } from 'lucide-react'
-import { OCASIONES, TEMPORADAS, CATEGORIAS, COLORES } from '../utils/categories'
+import { OCASIONES, TEMPORADAS, CATEGORIAS } from '../utils/categories'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
@@ -18,7 +18,7 @@ import ShareOutfitButton from '../components/outfit/ShareOutfitButton'
 export default function OutfitGeneratorPage() {
   const navigate = useNavigate()
   const { user, profile } = useAuthStore()
-  const { clothes, fetchClothes } = useClothingStore()
+  const { clothes, fetchClothes, getCleanClothes } = useClothingStore()
   const { saveOutfit } = useOutfitStore()
   const { weather, loading: weatherLoading, error: weatherError, locationDenied, refetch: refetchWeather } = useWeather()
 
@@ -37,8 +37,9 @@ export default function OutfitGeneratorPage() {
 
   const generateWithAI = async () => {
     try {
-      // Prepare simplified clothing data for the AI
-      const prendasParaIA = clothes.map(p => ({
+      // Prepare simplified clothing data for the AI (only clean clothes)
+      const cleanClothes = getCleanClothes()
+      const prendasParaIA = cleanClothes.map(p => ({
         id: p.id,
         categoria: p.categoria,
         subcategoria: p.subcategoria,
@@ -84,7 +85,8 @@ export default function OutfitGeneratorPage() {
   }
 
   const generateWithRules = () => {
-    const res = generateOutfits(clothes, { ocasion, temporada }, 3, weather)
+    const cleanClothes = getCleanClothes()
+    const res = generateOutfits(cleanClothes, { ocasion, temporada }, 3, weather)
     setResults(res)
     // El motor local ahora genera explicaciones automáticas
     if (res.outfits?.length > 0) {

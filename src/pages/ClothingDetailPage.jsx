@@ -16,7 +16,7 @@ import { toast } from '../components/ui/Toast'
 export default function ClothingDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { clothes, deleteClothing, updateClothing } = useClothingStore()
+  const { clothes, deleteClothing, updateClothing, toggleDirty } = useClothingStore()
   const [showDelete, setShowDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
@@ -148,6 +148,21 @@ export default function ClothingDetailPage() {
           }} className="p-2 rounded-xl hover:bg-bg-alt transition-colors text-text-muted hover:text-primary cursor-pointer" title="Donar prenda">
             <Heart className="w-5 h-5" />
           </button>
+          <button
+            onClick={() => toggleDirty(item.id, !item.sucia).then(() => toast.success(item.sucia ? 'Marcada como limpia' : 'Marcada como sucia'))}
+            className={`p-2 rounded-xl transition-colors cursor-pointer ${
+              item.sucia
+                ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                : 'hover:bg-bg-alt text-text-muted hover:text-amber-500'
+            }`}
+            title={item.sucia ? 'Marcar como limpia' : 'Marcar como sucia'}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18l-1.5 14a2 2 0 0 1-2 1.83H6.5a2 2 0 0 1-2-1.83L3 6z" />
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <circle cx="12" cy="14" r="3" />
+            </svg>
+          </button>
           <button onClick={() => setShowEdit(true)} className="p-2 rounded-xl hover:bg-bg-alt transition-colors text-text-muted hover:text-primary cursor-pointer" title="Editar prenda">
             <Edit3 className="w-5 h-5" />
           </button>
@@ -221,9 +236,16 @@ export default function ClothingDetailPage() {
           </div>
           
           {item.notas && (<div><p className="text-xs font-medium text-text-muted mb-0.5">Notas</p><p className="text-sm text-text-secondary">{item.notas}</p></div>)}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <p className="text-xs text-text-muted">Agregada el {formatDate(item.creado_en)}</p>
             <p className="text-xs text-text-muted bg-surface border border-border px-2 py-1 rounded-full">{item.veces_usado || 0} usos</p>
+            <p className={`text-xs font-medium px-2 py-1 rounded-full ${
+              item.sucia
+                ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20'
+                : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+            }`}>
+              {item.sucia ? '🧺 Sucia' : '✨ Limpia'}
+            </p>
           </div>
         </div>
       </div>

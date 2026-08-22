@@ -21,6 +21,7 @@ export default function ClosetPage() {
   }, [user?.id, fetchClothes])
 
   const filtered = useMemo(() => getFilteredClothes(), [clothes, filters])
+  const dirtyCount = useMemo(() => clothes.filter(c => c.sucia === true && (c.estado || 'activa') === 'activa').length, [clothes])
 
   if (loading && clothes.length === 0) {
     return <LoadingSpinner size="lg" text="Cargando tu closet..." />
@@ -34,6 +35,9 @@ export default function ClosetPage() {
           <h1 className="text-2xl font-bold text-text">Mi Closet</h1>
           <p className="text-sm text-text-muted mt-0.5">
             {clothes.length} prenda{clothes.length !== 1 ? 's' : ''}
+            {dirtyCount > 0 && (
+              <span className="ml-2 text-amber-500">• 🧺 {dirtyCount} sucia{dirtyCount !== 1 ? 's' : ''}</span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">

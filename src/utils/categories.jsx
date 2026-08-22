@@ -1,9 +1,7 @@
-import React from 'react'
 import { 
   Shirt, 
   Footprints, 
   Glasses, 
-  Layers, 
   Smile, 
   Briefcase, 
   PartyPopper, 
@@ -13,8 +11,7 @@ import {
   Sun,
   Leaf,
   Snowflake,
-  Infinity,
-  Sparkles,
+  Infinity as InfinityIcon,
   Compass,
   Activity
 } from 'lucide-react'
@@ -112,7 +109,7 @@ export const TEMPORADAS = [
   { 
     value: 'todas', 
     label: 'Todas', 
-    icon: <Infinity className="w-4 h-4 inline-block mr-1.5 align-text-bottom shrink-0 text-accent" /> 
+    icon: <InfinityIcon className="w-4 h-4 inline-block mr-1.5 align-text-bottom shrink-0 text-accent" /> 
   },
 ]
 

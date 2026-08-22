@@ -1,13 +1,17 @@
+/// <reference path="../deno.d.ts" />
 // supabase/functions/generar-outfit/index.ts
-// Edge Function: Genera sugerencias de outfit usando OpenRouter API (Llama 3.3 70B)
+// Edge Function: Genera sugerencias de outfit usando Gemini / OpenRouter API
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+// Declare Deno to satisfy the TypeScript compiler in standard VS Code configurations
+declare const Deno: any;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -109,7 +113,7 @@ REGLAS:
     }
 
     const data = await response.json()
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text
+    let content = data.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!content) {
       return new Response(
@@ -145,9 +149,10 @@ REGLAS:
 
   } catch (error) {
     console.error('Edge function error:', error)
+    const err = error as any
     
     // Si fue por el timeout
-    if (error.name === 'AbortError') {
+    if (err.name === 'AbortError') {
       return new Response(
         JSON.stringify({ error: 'La IA tardó demasiado en responder (Timeout)', fallback: true }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -155,7 +160,7 @@ REGLAS:
     }
 
     return new Response(
-      JSON.stringify({ error: error.message, fallback: true }),
+      JSON.stringify({ error: err.message, fallback: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

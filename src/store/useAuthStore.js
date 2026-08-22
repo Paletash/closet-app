@@ -126,6 +126,34 @@ export const useAuthStore = create((set, get) => ({
     return { data }
   },
 
+  resetPasswordForEmail: async (email) => {
+    set({ error: null })
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    })
+
+    if (error) {
+      set({ error: error.message })
+      return { error }
+    }
+
+    return { data }
+  },
+
+  updatePassword: async (newPassword) => {
+    set({ error: null })
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    })
+
+    if (error) {
+      set({ error: error.message })
+      return { error }
+    }
+
+    return { data }
+  },
+
   signOut: async () => {
     await supabase.auth.signOut()
     set({ session: null, user: null, profile: null })

@@ -7,7 +7,7 @@ import {
 } from '../utils/colors'
 
 /**
- * OutfitEngine v2.0 - Motor Profesional de Combinación de Outfits
+ * OutfitEngine v3.0 - Motor Profesional de Combinación de Outfits
  *
  * Genera combinaciones basándose en 6 pilares:
  * 1. Compatibilidad de colores (teoría del color + paletas curadas)
@@ -17,13 +17,24 @@ import {
  * 5. Diversidad de uso (prioriza prendas menos usadas)
  * 6. Anti-repetición (evita sugerir el mismo outfit dos veces)
  *
- * Genera explicaciones automáticas ("razón" y "tip de estilo")
- * sin necesidad de IA externa.
+ * v3.0: Shuffle aleatorio + jitter scoring + diversidad estricta
  */
 
 // ═══════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════
+
+/**
+ * Fisher-Yates shuffle — mezcla un array in-place de forma uniforme
+ */
+function shuffle(array) {
+  const arr = [...array]
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
 
 function groupByCategory(clothes) {
   const groups = { superior: [], inferior: [], calzado: [], chamarra: [], accesorio: [] }
@@ -119,10 +130,7 @@ function scoreStyles(items) {
 function hasSubcategoriaClash(items) {
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
-      if (subcategoriaClash(
-        items[i].subcategoria, items[i].categoria,
-        items[j].subcategoria, items[j].categoria
-      )) {
+      if (subcategoriaClash(items[i].subcategoria, items[j].subcategoria)) {
         return true
       }
     }
@@ -150,7 +158,7 @@ function scoreClimate(items, weather) {
     let score = 0.6
     if (hasTankTop || hasShort) score += 0.15
     if (hasSandals) score += 0.1
-    if (hasJacket || hasHoodie) score -= 0.3 // Chamarra con calor = mal
+    if (hasJacket || hasHoodie) score -= 0.3
     if (hasBoots) score -= 0.15
     return Math.max(0.1, Math.min(1, score))
   }
@@ -158,7 +166,7 @@ function scoreClimate(items, weather) {
   // Templado (15-25°C)
   if (temp >= 15 && temp <= 25) {
     let score = 0.7
-    if (hasTankTop && !hasJacket) score -= 0.1 // Tank top sin capa = podría tener frío
+    if (hasTankTop && !hasJacket) score -= 0.1
     return Math.max(0.1, Math.min(1, score))
   }
 
@@ -167,7 +175,7 @@ function scoreClimate(items, weather) {
     let score = 0.5
     if (hasJacket || hasHoodie) score += 0.25
     if (hasBoots) score += 0.1
-    if (hasTankTop) score -= 0.3 // Tank top con frío = mal
+    if (hasTankTop) score -= 0.3
     if (hasShort) score -= 0.25
     if (hasSandals) score -= 0.2
     return Math.max(0.1, Math.min(1, score))
@@ -185,13 +193,12 @@ function scoreDiversity(items) {
   if (useCounts.length === 0) return 0.5
 
   const maxUse = Math.max(...useCounts, 1)
-  // Mientras menos se hayan usado, mayor el score
   const avg = useCounts.reduce((a, b) => a + b, 0) / useCounts.length
   return Math.max(0.3, 1 - (avg / (maxUse * 2)))
 }
 
 /**
- * Puntuación final compuesta
+ * Puntuación final compuesta con jitter aleatorio para romper empates
  */
 function scoreOutfit(items, weather = null) {
   // Si tiene un clash de subcategorías, descartarlo con penalización severa
@@ -215,7 +222,10 @@ function scoreOutfit(items, weather = null) {
     diversityScore * weights.diversity +
     synergyBonus   * weights.synergy
 
-  return Math.min(1, Math.max(0, baseScore))
+  // Jitter aleatorio ±5% para romper empates deterministas
+  const jitter = (Math.random() - 0.5) * 0.10
+
+  return Math.min(1, Math.max(0, baseScore + jitter))
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -224,23 +234,25 @@ function scoreOutfit(items, weather = null) {
 
 /**
  * Genera todas las combinaciones posibles (con límite inteligente)
- * y las evalúa para devolver las mejores
+ * y las evalúa para devolver las mejores.
+ *
+ * v3.0: Shuffle aleatorio de cada grupo antes de limitar
  */
-function generateCandidates(groups, weather, maxCandidates = 200) {
+function generateCandidates(groups, weather, maxCandidates = 250) {
   const candidates = []
 
-  // Limitar cada grupo para evitar explosión combinatoria
-  const tops = groups.superior.slice(0, 8)
-  const bottoms = groups.inferior.slice(0, 8)
-  const shoes = groups.calzado.slice(0, 6)
-  const jackets = groups.chamarra || []
+  // Shuffle cada grupo antes de limitar para variar los candidatos cada vez
+  const tops = shuffle(groups.superior).slice(0, 10)
+  const bottoms = shuffle(groups.inferior).slice(0, 10)
+  const shoes = shuffle(groups.calzado).slice(0, 8)
+  const jackets = shuffle(groups.chamarra || [])
 
   for (const top of tops) {
     for (const bottom of bottoms) {
       for (const shoe of shoes) {
         const baseItems = [top, bottom, shoe]
 
-        // Evaluar combinación base (sin chamarra ni accesorio)
+        // Evaluar combinación base (sin chamarra)
         const baseScore = scoreOutfit(baseItems, weather)
 
         // Solo considerar si la base es decente (>0.3)
@@ -278,29 +290,46 @@ function generateCandidates(groups, weather, maxCandidates = 200) {
 }
 
 /**
- * Selecciona los mejores outfits, asegurando diversidad
- * (no repite la misma prenda superior en dos outfits seguidos)
+ * Selecciona los mejores outfits, asegurando diversidad REAL.
+ *
+ * v3.0: Diversidad estricta — evita repetir CUALQUIER prenda individual
+ * entre outfits, con fallback gradual si no hay suficientes candidatos.
  */
 function selectDiverseOutfits(candidates, count) {
   const selected = []
-  const usedTops = new Set()
-  const usedBottoms = new Set()
+  const usedItemIds = new Set()
 
+  // Fase 1: Estricta — ningún item repetido
   for (const candidate of candidates) {
     if (selected.length >= count) break
 
-    const topId = candidate.items.find(i => i.categoria === 'superior')?.id
-    const bottomId = candidate.items.find(i => i.categoria === 'inferior')?.id
+    const ids = candidate.items.map(i => i.id)
+    const hasRepeat = ids.some(id => usedItemIds.has(id))
 
-    // Intentar no repetir la misma prenda superior o inferior
-    if (selected.length > 0 && usedTops.has(topId) && usedBottoms.has(bottomId)) continue
-
-    selected.push(candidate)
-    if (topId) usedTops.add(topId)
-    if (bottomId) usedBottoms.add(bottomId)
+    if (!hasRepeat) {
+      selected.push(candidate)
+      ids.forEach(id => usedItemIds.add(id))
+    }
   }
 
-  // Si no alcanzamos el count con diversidad, rellenar con los mejores restantes
+  // Fase 2: Relajada — permite 1 item repetido si no alcanzamos el count
+  if (selected.length < count) {
+    for (const candidate of candidates) {
+      if (selected.length >= count) break
+      if (selected.includes(candidate)) continue
+
+      const ids = candidate.items.map(i => i.id)
+      const repeatCount = ids.filter(id => usedItemIds.has(id)).length
+
+      // Máximo 1 repetición permitida (ej: mismo zapato, distinto top+bottom)
+      if (repeatCount <= 1) {
+        selected.push(candidate)
+        ids.forEach(id => usedItemIds.add(id))
+      }
+    }
+  }
+
+  // Fase 3: Fallback — rellenar con los mejores restantes sin restricción
   if (selected.length < count) {
     for (const candidate of candidates) {
       if (selected.length >= count) break
@@ -314,7 +343,7 @@ function selectDiverseOutfits(candidates, count) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// AUTO-EXPLANATION GENERATOR
+// AUTO-EXPLANATION GENERATOR (v3.0 — pool expandido)
 // ═══════════════════════════════════════════════════════════
 
 const COLOR_LABELS = {
@@ -324,82 +353,153 @@ const COLOR_LABELS = {
   cafe: 'café', vino: 'vino', olivo: 'olivo', coral: 'coral',
 }
 
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
 function generateExplanation(outfit) {
   const items = outfit.items
   const colors = [...new Set(items.map(i => COLOR_LABELS[i.color_principal] || i.color_principal).filter(Boolean))]
   const styles = [...new Set(items.flatMap(i => i.estilos || []))]
-  const categories = items.map(i => i.subcategoria || i.categoria).filter(Boolean)
+  const subs = items.map(i => i.subcategoria).filter(Boolean)
   const score = outfit.score
 
   // ── Razón ──
   const reasons = []
 
-  // Explicar colores
-  if (colors.length <= 2) {
-    reasons.push(`Paleta minimalista de ${colors.join(' y ')} que proyecta elegancia`)
+  // Explicar colores con variantes
+  if (colors.length === 1) {
+    reasons.push(pickRandom([
+      `Look monocromático en ${colors[0]} que transmite cohesión y seguridad`,
+      `Todo en ${colors[0]} para un efecto visual limpio y sofisticado`,
+      `Paleta total ${colors[0]}: audaz y con personalidad`,
+    ]))
+  } else if (colors.length === 2) {
+    reasons.push(pickRandom([
+      `Paleta minimalista de ${colors.join(' y ')} que proyecta elegancia`,
+      `Duo clásico de ${colors.join(' y ')}: equilibrado y fácil de llevar`,
+      `${colors[0].charAt(0).toUpperCase() + colors[0].slice(1)} con ${colors[1]} es una combinación probada en moda`,
+      `La armonía entre ${colors.join(' y ')} crea un look cohesivo y atemporal`,
+    ]))
   } else if (colors.length === 3) {
-    reasons.push(`Combinación equilibrada de ${colors.join(', ')} siguiendo la regla de los 3 colores`)
+    reasons.push(pickRandom([
+      `Combinación equilibrada de ${colors.join(', ')} siguiendo la regla de los 3 colores`,
+      `Trío armónico de ${colors.join(', ')} que aporta dinamismo sin saturar`,
+      `${colors.join(', ')}: una paleta versátil que funciona en cualquier contexto`,
+    ]))
   } else {
-    reasons.push(`Mix creativo de ${colors.join(', ')}`)
+    reasons.push(pickRandom([
+      `Mix creativo de ${colors.join(', ')} para un look expresivo`,
+      `Paleta rica en ${colors.join(', ')} que demuestra confianza en el estilo`,
+    ]))
   }
 
-  // Explicar estilo
+  // Explicar estilo con variantes
   if (styles.includes('formal') && styles.includes('casual')) {
-    reasons.push('fusiona lo formal con lo casual para un look smart-casual')
+    reasons.push(pickRandom([
+      'fusiona lo formal con lo casual para un look smart-casual',
+      'la mezcla formal/casual crea un equilibrio sofisticado pero accesible',
+      'rompe la rigidez formal con toques casuales para un estilo moderno',
+    ]))
   } else if (styles.includes('formal')) {
-    reasons.push('mantiene una línea formal y pulida')
+    reasons.push(pickRandom([
+      'mantiene una línea formal y pulida',
+      'transmite profesionalismo y atención al detalle',
+      'ideal para proyectar autoridad y confianza',
+    ]))
   } else if (styles.includes('urbano')) {
-    reasons.push('con un toque urbano y contemporáneo')
+    reasons.push(pickRandom([
+      'con un toque urbano y contemporáneo',
+      'el estilo urbano le da personalidad y frescura',
+      'un look street-style que se siente actual y auténtico',
+    ]))
   } else if (styles.includes('deportivo')) {
-    reasons.push('cómodo y funcional para el movimiento')
+    reasons.push(pickRandom([
+      'cómodo y funcional para el movimiento',
+      'athleisure: deportivo pero con estilo',
+      'preparado para la acción sin sacrificar el look',
+    ]))
   } else {
-    reasons.push('relajado y versátil para el día a día')
+    reasons.push(pickRandom([
+      'relajado y versátil para el día a día',
+      'un look casual que funciona para cualquier plan',
+      'comodidad ante todo, sin perder el estilo',
+      'fácil de llevar y combinable con lo que ya tienes',
+    ]))
   }
 
   // Explicar prendas clave
-  const hasJacket = items.find(i => i.categoria === 'chamarra')
-  if (hasJacket) {
-    reasons.push(`la ${(hasJacket.subcategoria || 'chamarra').toLowerCase()} agrega estructura al look`)
+  const jacket = items.find(i => i.categoria === 'chamarra')
+  if (jacket) {
+    reasons.push(pickRandom([
+      `la ${(jacket.subcategoria || 'chamarra').toLowerCase()} agrega estructura al look`,
+      `la capa exterior en ${COLOR_LABELS[jacket.color_principal] || jacket.color_principal} eleva el conjunto`,
+      `con la ${(jacket.subcategoria || 'chamarra').toLowerCase()} como pieza de transición`,
+    ]))
   }
 
   const razon = reasons[0].charAt(0).toUpperCase() + reasons[0].slice(1) +
     (reasons.length > 1 ? ', ' + reasons.slice(1).join(' y ') : '') + '.'
 
-  // ── Tip de estilo ──
+  // ── Tip de estilo (pool expandido y contextual) ──
   const tips = []
 
+  // Tips universales según score
   if (score >= 0.8) {
     tips.push(
       'Remanga las mangas para un aire más desenfadado.',
       'Añade un reloj minimalista para elevar el outfit.',
       'Lleva los colores claros arriba y oscuros abajo para estilizar la silueta.',
+      'Un perfume que combine con la ocasión completa la experiencia del outfit.',
+      'Lleva la confianza como accesorio principal — este look está bien armado.',
     )
   } else if (score >= 0.6) {
     tips.push(
       'Un cinturón del mismo tono que el calzado unificará todo el look.',
       'Enrolla el bajo del pantalón para mostrar el calzado y dar un toque moderno.',
-      'Prueba meter la parte delantera de la camisa/playera dentro del pantalón para definir la cintura.',
+      'Prueba meter la parte delantera de la playera dentro del pantalón (French tuck).',
+      'Un accesorio pequeño (pulsera, anillo) puede hacer la diferencia.',
+      'Si el outfit se siente plano, agrega textura con una bufanda o un suéter por encima.',
     )
   } else {
     tips.push(
       'Juega con accesorios (gorra, reloj, bufanda) para darle personalidad.',
-      'Si te sientes inseguro con esta combinación, añade una prenda neutra (negra, blanca o gris) como capa.',
+      'Si te sientes inseguro, añade una prenda neutra (negra, blanca o gris) como capa.',
       'Recuerda: la confianza es el mejor accesorio. Luce lo que te haga sentir bien.',
+      'A veces lo simple funciona mejor — no tengas miedo de lo básico.',
     )
   }
 
-  // Tip específico por categoría
-  if (categories.includes('Blazer')) {
+  // Tips contextuales por subcategoría
+  if (subs.includes('Blazer')) {
     tips.push('Dobla las mangas del blazer hasta el antebrazo para un look más relajado pero pulido.')
   }
-  if (categories.includes('Hoodie') && categories.includes('Jeans')) {
+  if (subs.includes('Hoodie') && subs.includes('Jeans')) {
     tips.push('Unos tenis blancos completarían este look streetwear a la perfección.')
   }
-  if (categories.includes('Camisa') && categories.includes('Jeans')) {
+  if (subs.includes('Camisa') && subs.includes('Jeans')) {
     tips.push('Este es un look smart-casual perfecto para una primera cita o un brunch.')
   }
+  if (subs.includes('Playera') && subs.includes('Short')) {
+    tips.push('Ideal para un día caluroso: cómodo, fresco y con estilo.')
+  }
+  if (subs.includes('Polo')) {
+    tips.push('El polo es la prenda puente entre lo casual y lo elegante — úsalo a tu favor.')
+  }
+  if (subs.includes('Botas')) {
+    tips.push('Las botas anclan visualmente el outfit — perfecto para climas frescos o looks con carácter.')
+  }
+  if (subs.includes('Chamarra') || subs.includes('Sudadera')) {
+    tips.push('Deja la chamarra/sudadera abierta para mostrar la prenda de abajo y crear profundidad.')
+  }
+  if (subs.includes('Falda')) {
+    tips.push('Juega con la proporción: si la falda es corta, arriba ve holgado; si es larga, arriba ajustado.')
+  }
+  if (subs.includes('Sandalias')) {
+    tips.push('Las sandalias piden un look relajado — asegúrate de que el resto del outfit acompañe la vibra.')
+  }
 
-  const tip_estilo = tips[Math.floor(Math.random() * tips.length)]
+  const tip_estilo = pickRandom(tips)
 
   return { razon, tip_estilo }
 }
@@ -468,3 +568,4 @@ export function generateOutfits(clothes, params = {}, count = 3, weather = null)
     missing: null,
   }
 }
+

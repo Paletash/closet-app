@@ -1,13 +1,17 @@
+/// <reference path="../deno.d.ts" />
 // supabase/functions/obtener-clima/index.ts
 // Edge Function: Obtiene el clima actual usando OpenWeatherMap API
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+// Declare Deno to satisfy TypeScript language server in any IDE configuration
+declare const Deno: any;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -70,11 +74,12 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Edge function error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error?.message || 'Error interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
+
