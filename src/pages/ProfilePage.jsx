@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import Button from '../components/ui/Button'
@@ -25,28 +25,18 @@ export default function ProfilePage() {
   const { isSupported, isEnabled, toggleEnabled } = useNotifications()
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [form, setForm] = useState({
-    nombre: '',
-    estilos_favoritos: [],
-    colores_favoritos: [],
-    talla_superior: '',
-    talla_inferior: '',
-    talla_calzado: '',
-  })
 
-  // Sync profile data when component mounts
-  useEffect(() => {
-    if (profile) {
-      setForm({
-        nombre: profile.nombre || '',
-        estilos_favoritos: profile.estilos_favoritos || (profile.estilo ? [profile.estilo] : []),
-        colores_favoritos: profile.colores_favoritos || [],
-        talla_superior: profile.talla_superior || '',
-        talla_inferior: profile.talla_inferior || '',
-        talla_calzado: profile.talla_calzado || '',
-      })
-    }
-  }, [profile])
+  // Derive initial form from profile — re-create only when profile reference changes
+  const initialForm = useMemo(() => ({
+    nombre: profile?.nombre || '',
+    estilos_favoritos: profile?.estilos_favoritos || (profile?.estilo ? [profile.estilo] : []),
+    colores_favoritos: profile?.colores_favoritos || [],
+    talla_superior: profile?.talla_superior || '',
+    talla_inferior: profile?.talla_inferior || '',
+    talla_calzado: profile?.talla_calzado || '',
+  }), [profile])
+
+  const [form, setForm] = useState(initialForm)
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0]

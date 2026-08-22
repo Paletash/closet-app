@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useClothingStore } from '../store/useClothingStore'
 import { useMarketplaceStore } from '../store/useMarketplaceStore'
@@ -29,33 +29,26 @@ export default function ClothingDetailPage() {
   
   const item = clothes.find((c) => c.id === id)
 
-  const [editForm, setEditForm] = useState({
-    categoria: '',
-    subcategoria: '',
-    color_principal: '',
-    estilos: [],
-    temporadas: [],
-    marca: '',
-    precio: '',
-    notas: '',
-    etiquetas: [],
-  })
+  // Derive initial edit form from item — no useEffect needed
+  const deriveEditForm = useCallback((src) => ({
+    categoria: src?.categoria || '',
+    subcategoria: src?.subcategoria || '',
+    color_principal: src?.color_principal || '',
+    estilos: src?.estilos || [],
+    temporadas: src?.temporadas || [],
+    marca: src?.marca || '',
+    precio: src?.precio || '',
+    notas: src?.notas || '',
+    etiquetas: src?.etiquetas || [],
+  }), [])
 
-  useEffect(() => {
-    if (item) {
-      setEditForm({
-        categoria: item.categoria || '',
-        subcategoria: item.subcategoria || '',
-        color_principal: item.color_principal || '',
-        estilos: item.estilos || [],
-        temporadas: item.temporadas || [],
-        marca: item.marca || '',
-        precio: item.precio || '',
-        notas: item.notas || '',
-        etiquetas: item.etiquetas || [],
-      })
-    }
-  }, [item, showEdit])
+  const [editForm, setEditForm] = useState(() => deriveEditForm(item))
+
+  // Re-sync form when opening the edit modal
+  const handleOpenEdit = useCallback(() => {
+    setEditForm(deriveEditForm(item))
+    setShowEdit(true)
+  }, [item, deriveEditForm])
 
   const toggleArrayField = (field, value) => {
     setEditForm((prev) => ({
@@ -163,7 +156,7 @@ export default function ClothingDetailPage() {
               <circle cx="12" cy="14" r="3" />
             </svg>
           </button>
-          <button onClick={() => setShowEdit(true)} className="p-2 rounded-xl hover:bg-bg-alt transition-colors text-text-muted hover:text-primary cursor-pointer" title="Editar prenda">
+          <button onClick={handleOpenEdit} className="p-2 rounded-xl hover:bg-bg-alt transition-colors text-text-muted hover:text-primary cursor-pointer" title="Editar prenda">
             <Edit3 className="w-5 h-5" />
           </button>
           <button onClick={() => setShowDelete(true)} className="p-2 rounded-xl hover:bg-error-light transition-colors text-text-muted hover:text-error cursor-pointer" title="Eliminar prenda">

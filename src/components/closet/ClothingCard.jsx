@@ -2,7 +2,6 @@ import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CATEGORIAS, COLORES } from '../../utils/categories'
 import { useClothingStore } from '../../store/useClothingStore'
-import { ShirtIcon } from 'lucide-react'
 
 // Inline laundry basket SVG icon (no lucide equivalent)
 function LaundryIcon({ className }) {
@@ -42,6 +41,7 @@ const ClothingCard = memo(function ClothingCard({ item }) {
           alt={item.subcategoria || item.categoria}
           className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${isDirty ? 'opacity-50 grayscale-[40%]' : ''}`}
           loading="lazy"
+          decoding="async"
         />
 
         {/* Color dot */}

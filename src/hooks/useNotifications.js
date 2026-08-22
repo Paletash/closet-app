@@ -1,22 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
-import { useWeather } from './useWeather'
+import { useState, useCallback } from 'react'
 
 export function useNotifications() {
-  const [isSupported, setIsSupported] = useState(false)
-  const [permission, setPermission] = useState('default') // 'default', 'granted', 'denied'
-  const [isEnabled, setIsEnabled] = useState(false) // User preference from localStorage
-
-  useEffect(() => {
-    const supported = 'Notification' in window
-    setIsSupported(supported)
-    if (supported) {
-      setPermission(Notification.permission)
-    }
-    
-    const pref = localStorage.getItem('outfitme_notif_enabled')
-    if (pref === 'true') setIsEnabled(true)
-  }, [])
+  const [isSupported] = useState(() => 'Notification' in window)
+  const [permission, setPermission] = useState(() =>
+    'Notification' in window ? Notification.permission : 'default'
+  )
+  const [isEnabled, setIsEnabled] = useState(() =>
+    localStorage.getItem('outfitme_notif_enabled') === 'true'
+  )
 
   const requestPermission = useCallback(async () => {
     if (!isSupported) return false
@@ -59,3 +50,4 @@ export function useNotifications() {
     toggleEnabled
   }
 }
+

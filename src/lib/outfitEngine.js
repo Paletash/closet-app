@@ -233,15 +233,51 @@ function scoreOutfit(items, weather = null) {
 // ═══════════════════════════════════════════════════════════
 
 /**
+ * Memoized color compatibility lookup.
+ * Builds a Map keyed by "colorA|colorB" so each pair is computed at most once.
+ */
+function buildColorMemo(items) {
+  const memo = new Map()
+  const colors = [...new Set(items.map(i => i.color_principal).filter(Boolean))]
+  for (let i = 0; i < colors.length; i++) {
+    for (let j = i; j < colors.length; j++) {
+      const key = colors[i] <= colors[j] ? `${colors[i]}|${colors[j]}` : `${colors[j]}|${colors[i]}`
+      if (!memo.has(key)) {
+        memo.set(key, colorCompatibility(colors[i], colors[j]))
+      }
+    }
+  }
+  return memo
+}
+
+function getColorCompat(memo, c1, c2) {
+  if (!c1 || !c2) return 0.5
+  const key = c1 <= c2 ? `${c1}|${c2}` : `${c2}|${c1}`
+  if (memo.has(key)) return memo.get(key)
+  const val = colorCompatibility(c1, c2)
+  memo.set(key, val)
+  return val
+}
+
+/**
  * Genera todas las combinaciones posibles (con límite inteligente)
  * y las evalúa para devolver las mejores.
  *
- * v3.0: Shuffle aleatorio de cada grupo antes de limitar
+ * v3.1: Memoización de pares de color + poda temprana de clashes
  */
 function generateCandidates(groups, weather, maxCandidates = 250) {
   const candidates = []
 
-  // Shuffle cada grupo antes de limitar para variar los candidatos cada vez
+  // Pre-compute color compatibility memoization table
+  const allItems = [
+    ...(groups.superior || []),
+    ...(groups.inferior || []),
+    ...(groups.calzado || []),
+    ...(groups.chamarra || []),
+  ]
+  const colorMemo = buildColorMemo(allItems)
+
+  // Shuffle each group before limiting to vary candidates each time
   const tops = shuffle(groups.superior).slice(0, 10)
   const bottoms = shuffle(groups.inferior).slice(0, 10)
   const shoes = shuffle(groups.calzado).slice(0, 8)
@@ -249,6 +285,11 @@ function generateCandidates(groups, weather, maxCandidates = 250) {
 
   for (const top of tops) {
     for (const bottom of bottoms) {
+      // ── EARLY PRUNING ──
+      // If top+bottom have a critical color clash, skip ALL shoes for this pair
+      const pairCompat = getColorCompat(colorMemo, top.color_principal, bottom.color_principal)
+      if (pairCompat < 0.2) continue
+
       for (const shoe of shoes) {
         const baseItems = [top, bottom, shoe]
 
