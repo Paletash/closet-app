@@ -1,12 +1,32 @@
-import { useState, useRef } from 'react'
+import PrivateImage from '../ui/PrivateImage'
+import { useState, useRef, useEffect } from 'react'
 
 export default function OutfitSwipeCard({ outfit, onResult, active }) {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const startPos = useRef({ x: 0, y: 0 })
+  const pending = useRef(false)
+  const mounted = useRef(true)
+  const animation = useRef(null)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; clearTimeout(animation.current) }
+  }, [])
+
+  const finishSwipe = (action) => {
+    pending.current = true
+    animation.current = setTimeout(async () => {
+      try { await onResult(action) }
+      finally {
+        pending.current = false
+        // Failed saves and sharing keep this card: restore it for another attempt.
+        if (mounted.current) setDragOffset({ x: 0, y: 0 })
+      }
+    }, 200)
+  }
 
   const handleStart = (clientX, clientY) => {
-    if (!active) return
+    if (!active || pending.current) return
     setIsDragging(true)
     startPos.current = { x: clientX, y: clientY }
   }
@@ -27,13 +47,13 @@ export default function OutfitSwipeCard({ outfit, onResult, active }) {
     
     if (dragOffset.x > thresholdX) {
       setDragOffset({ x: window.innerWidth, y: dragOffset.y })
-      setTimeout(() => onResult('save'), 200)
+      finishSwipe('save')
     } else if (dragOffset.x < -thresholdX) {
       setDragOffset({ x: -window.innerWidth, y: dragOffset.y })
-      setTimeout(() => onResult('discard'), 200)
+      finishSwipe('discard')
     } else if (dragOffset.y < thresholdY) {
       setDragOffset({ x: dragOffset.x, y: -window.innerHeight })
-      setTimeout(() => onResult('share'), 200)
+      finishSwipe('share')
     } else {
       setDragOffset({ x: 0, y: 0 }) // snap back
     }
@@ -51,13 +71,9 @@ export default function OutfitSwipeCard({ outfit, onResult, active }) {
   const rotation = dragOffset.x * 0.05
   const items = outfit.items || []
 
-  if (!active && dragOffset.x === 0 && dragOffset.y === 0) {
-    // Si no está activo y no se está animando para salir, no tiene offset
-  }
-
   return (
     <div 
-      className={`absolute inset-0 max-w-sm mx-auto w-full h-[65vh] bg-surface rounded-3xl shadow-xl border border-border select-none overflow-hidden touch-none
+      className={`absolute inset-0 max-w-sm mx-auto w-full h-full bg-surface rounded-3xl shadow-xl border border-border select-none overflow-hidden touch-none
         ${!isDragging ? 'transition-all duration-300 ease-out' : ''}
       `}
       style={{
@@ -73,17 +89,17 @@ export default function OutfitSwipeCard({ outfit, onResult, active }) {
       onMouseLeave={onMouseLeave}
     >
       <div className="p-4 h-full flex flex-col pointer-events-none">
-        <div className="flex-1 grid grid-cols-2 gap-2 mb-4 bg-bg-alt rounded-2xl p-2">
+        <div className="flex-1 min-h-0 grid grid-cols-2 auto-rows-fr gap-2 mb-4 bg-bg-alt rounded-2xl p-2">
           {items.map((item, i) => (
-             <div key={item.id || i} className={`bg-white rounded-xl overflow-hidden border border-border/50 ${items.length === 3 && i === 0 ? 'col-span-2 aspect-[2/1]' : 'aspect-square'}`}>
-               <img src={item.foto_url} alt="" className="w-full h-full object-contain p-2" draggable={false} />
+             <div key={item.id || i} className={`min-h-0 bg-white rounded-xl overflow-hidden border border-border/50 ${items.length === 3 && i === 0 ? 'col-span-2' : ''}`}>
+               <PrivateImage src={item.foto_url} alt="" className="w-full h-full object-contain p-2" draggable={false} />
              </div>
           ))}
         </div>
 
         <div className="text-center">
           <p className="font-bold text-text text-xl">
-            Compatibilidad: {Math.round((outfit.score || 0) * 100)}%
+            {outfit.generado_por_ia ? 'Personalizado con IA' : 'Combinación local'}
           </p>
           <div className="flex flex-wrap justify-center gap-1.5 mt-3">
             {Array.from(new Set(items.flatMap(i => i.estilos || []))).slice(0, 3).map(s => (

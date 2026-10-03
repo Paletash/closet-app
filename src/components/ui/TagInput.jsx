@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { X, Tag as TagIcon } from 'lucide-react'
-import { toast } from './Toast'
+import { toast } from '../../lib/toast'
 
 export default function TagInput({ tags, onChange, maxTags = 10, existingUserTags = [] }) {
   const [inputValue, setInputValue] = useState('')

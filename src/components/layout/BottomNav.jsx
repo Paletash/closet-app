@@ -19,7 +19,7 @@ export default function BottomNav() {
       <div className="flex items-center justify-around h-16 px-1">
         {tabs.map(({ to, icon: Icon, label }) => {
           const isActive = location.pathname === to ||
-            (to !== '/' && location.pathname.startsWith(to))
+            (to === '/closet' && location.pathname.startsWith('/closet/') && location.pathname !== '/closet/add')
 
           return (
             <NavLink

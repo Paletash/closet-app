@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { mediaReference } from '../lib/mediaReference'
+import { deletePhoto } from '../lib/privateMedia'
 
-export const useLookStore = create((set) => ({
+export const useLookStore = create((set, get) => ({
   looks: [],
   loading: false,
   error: null,
@@ -75,17 +77,12 @@ export const useLookStore = create((set) => ({
       return { error: uploadError }
     }
 
-    // 2. Get public URL
-    const { data: urlData } = supabase.storage
-      .from('prendas-fotos')
-      .getPublicUrl(filePath)
-
     // 3. Insert record
     const { data, error } = await supabase
       .from('looks_del_dia')
       .insert({
         user_id: userId,
-        foto_url: urlData.publicUrl,
+        foto_url: mediaReference('prendas-fotos', filePath),
         fecha,
         notas: notas || null,
       })
@@ -93,6 +90,7 @@ export const useLookStore = create((set) => ({
       .single()
 
     if (error) {
+      await supabase.storage.from('prendas-fotos').remove([filePath])
       set({ error: error.message, loading: false })
       return { error }
     }
@@ -108,6 +106,7 @@ export const useLookStore = create((set) => ({
    * Delete a look
    */
   deleteLook: async (lookId) => {
+    const photo = get().looks.find(look => look.id === lookId)?.foto_url
     const { error } = await supabase
       .from('looks_del_dia')
       .delete()
@@ -121,6 +120,7 @@ export const useLookStore = create((set) => ({
     set((state) => ({
       looks: state.looks.filter((l) => l.id !== lookId),
     }))
+    try { await deletePhoto(photo) } catch { return { success: true, warning: 'No se pudo borrar la foto del almacenamiento.' } }
     return { success: true }
   },
 }))

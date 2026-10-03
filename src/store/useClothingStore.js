@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { mediaReference } from '../lib/mediaReference'
+import { deletePhoto } from '../lib/privateMedia'
 
 export const useClothingStore = create((set, get) => ({
   clothes: [],
@@ -24,7 +26,7 @@ export const useClothingStore = create((set, get) => ({
   setFiltersFromVisualSearch: (data) => set({
     filters: {
       categoria: null, color: null, estilo: null, temporada: null, tag: null, search: '',
-      iaMatches: data.prendas_detectadas || [], limpieza: null
+      iaMatches: Array.isArray(data.prendas_detectadas) ? data.prendas_detectadas.filter(item => item && typeof item.categoria === 'string') : [], limpieza: null
     }
   }),
 
@@ -138,50 +140,33 @@ export const useClothingStore = create((set, get) => ({
       }
       const fileName = `${userId}/${crypto.randomUUID()}.${fileExt}`
 
-      console.log('[addClothing] Step 1: Uploading image...', fileName)
-
-      // Upload image with timeout to prevent infinite hang
-      const uploadPromise = supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('prendas-fotos')
         .upload(fileName, imageFile, {
-          cacheControl: '3600',
+          cacheControl: '0',
           upsert: false,
           contentType: imageFile.type || 'image/jpeg',
         })
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('La subida de imagen tardó demasiado (30s). Revisa tu conexión a internet o los permisos del bucket "prendas-fotos" en Supabase Storage.')), 30000)
-      )
-
-      const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise])
 
       if (uploadError) {
         console.error('[addClothing] Upload error:', uploadError)
         throw uploadError
       }
 
-      console.log('[addClothing] Step 2: Getting public URL...')
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('prendas-fotos')
-        .getPublicUrl(fileName)
-
-      console.log('[addClothing] Step 3: Inserting into DB...', urlData?.publicUrl)
-
       // Insert clothing record
       const { data, error } = await supabase
         .from('prendas')
         .insert({
           ...clothing,
-          foto_url: urlData.publicUrl,
+          foto_url: mediaReference('prendas-fotos', fileName),
         })
         .select()
         .single()
 
-      console.log('[addClothing] Step 4: Insert result:', { data, error })
-
-      if (error) throw error
+      if (error) {
+        await supabase.storage.from('prendas-fotos').remove([fileName])
+        throw error
+      }
 
       set((state) => ({
         clothes: [data, ...state.clothes],
@@ -218,6 +203,7 @@ export const useClothingStore = create((set, get) => ({
   deleteClothing: async (id) => {
     set({ loading: true, error: null })
     try {
+      const photo = get().clothes.find(item => item.id === id)?.foto_url
       const { error } = await supabase
         .from('prendas')
         .delete()
@@ -229,6 +215,7 @@ export const useClothingStore = create((set, get) => ({
         clothes: state.clothes.filter((c) => c.id !== id),
         loading: false,
       }))
+      try { await deletePhoto(photo) } catch { return { success: true, warning: 'La prenda se eliminó, pero no se pudo borrar su foto del almacenamiento. Se requiere revisar la limpieza de archivos.' } }
       return { success: true }
     } catch (error) {
       console.error('[deleteClothing] Error deleting clothing:', error)

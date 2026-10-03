@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/useAuthStore'
-import { Shirt, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { Shirt, Eye, EyeOff } from 'lucide-react'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Modal from '../ui/Modal'
-import { toast } from '../ui/Toast'
+import { toast } from '../../lib/toast'
 
 export default function LoginForm() {
   const [email, setEmail] = useState('')
@@ -144,6 +144,7 @@ export default function LoginForm() {
               Regístrate
             </Link>
           </p>
+          <p className="text-center text-xs text-text-muted mt-4"><Link to="/privacy" className="underline">Cómo usamos tus datos</Link></p>
         </div>
       </div>
 

@@ -1,9 +1,11 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useClothingStore } from '../store/useClothingStore'
 import { useOutfitStore } from '../store/useOutfitStore'
 import { useWeather } from '../hooks/useWeather'
 import { generateOutfits } from '../lib/outfitEngine'
+import { eligibleClothes, validateOutfitSelection } from '../lib/outfitValidation'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Sparkles, RefreshCw, Save, ChevronLeft, ChevronRight, Zap, Cpu, MessageSquare, Lightbulb, Layers } from 'lucide-react'
@@ -12,7 +14,7 @@ import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import WeatherCard from '../components/weather/WeatherCard'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 import ShareOutfitButton from '../components/outfit/ShareOutfitButton'
 
 export default function OutfitGeneratorPage() {
@@ -26,7 +28,7 @@ export default function OutfitGeneratorPage() {
   const [temporada, setTemporada] = useState('')
   const [useAI, setUseAI] = useState(true)
   const [results, setResults] = useState(null)
-  const [aiResponse, setAiResponse] = useState(null) // { razon, tip_estilo }
+  const [contexto, setContexto] = useState('')
   const [currentIdx, setCurrentIdx] = useState(0)
   const [generating, setGenerating] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -38,7 +40,7 @@ export default function OutfitGeneratorPage() {
   const generateWithAI = async () => {
     try {
       // Prepare simplified clothing data for the AI (only clean clothes)
-      const cleanClothes = getCleanClothes()
+      const cleanClothes = eligibleClothes(getCleanClothes(), temporada)
       const prendasParaIA = cleanClothes.map(p => ({
         id: p.id,
         categoria: p.categoria,
@@ -49,11 +51,14 @@ export default function OutfitGeneratorPage() {
       }))
 
       const { data, error } = await supabase.functions.invoke('generar-outfit', {
+        timeout: 35000,
         body: {
           prendas: prendasParaIA,
           ocasion: ocasion || 'casual',
           clima: weather ? { temperatura: weather.temperatura, descripcion: weather.descripcion } : null,
           estilo_usuario: profile?.estilo || null,
+          preferencias: { estilos: profile?.estilos_favoritos || [], colores: profile?.colores_favoritos || [] },
+          contexto: contexto.trim(),
         },
       })
 
@@ -62,20 +67,13 @@ export default function OutfitGeneratorPage() {
       if (data?.error) throw new Error(data.error)
 
       // Map AI-selected IDs to actual clothes
-      const selectedIds = data.prendas_seleccionadas || []
-      const selectedItems = selectedIds
-        .map(id => clothes.find(c => c.id === id))
-        .filter(Boolean)
-
-      if (selectedItems.length < 2) {
-        throw new Error('La IA no seleccionó suficientes prendas válidas')
-      }
+      const selectedItems = validateOutfitSelection(data.prendas_seleccionadas, cleanClothes)
 
       setResults({
-        outfits: [{ items: selectedItems, score: 0.95, prendaIds: selectedItems.map(i => i.id) }],
+        outfits: [{ items: selectedItems, prendaIds: selectedItems.map(i => i.id),
+          generado_por_ia: true, ocasion: ocasion || 'casual', razon: data.razon, tip_estilo: data.tip_estilo }],
         error: null,
       })
-      setAiResponse({ razon: data.razon, tip_estilo: data.tip_estilo })
       setCurrentIdx(0)
       return true
     } catch (err) {
@@ -87,26 +85,20 @@ export default function OutfitGeneratorPage() {
   const generateWithRules = () => {
     const cleanClothes = getCleanClothes()
     const res = generateOutfits(cleanClothes, { ocasion, temporada }, 3, weather)
+    res.outfits = res.outfits.map(outfit => ({ ...outfit, generado_por_ia: false, ocasion: ocasion || 'casual' }))
     setResults(res)
-    // El motor local ahora genera explicaciones automáticas
-    if (res.outfits?.length > 0) {
-      const first = res.outfits[0]
-      setAiResponse({ razon: first.razon, tip_estilo: first.tip_estilo })
-    } else {
-      setAiResponse(null)
-    }
     setCurrentIdx(0)
     if (res.error) toast.warning(res.error)
   }
 
   const handleGenerate = async () => {
+    if (generating) return
     setGenerating(true)
-    setAiResponse(null)
-
+    try {
     if (useAI) {
       const aiSuccess = await generateWithAI()
       if (!aiSuccess) {
-        toast.info('IA no disponible, usando reglas inteligentes')
+        toast.info(contexto.trim() ? 'Usamos combinaciones locales; tu contexto escrito no se pudo aplicar.' : 'Usamos combinaciones locales mientras se recupera la IA.')
         generateWithRules()
       }
     } else {
@@ -115,14 +107,15 @@ export default function OutfitGeneratorPage() {
       generateWithRules()
     }
 
-    setGenerating(false)
+    } catch { toast.error('No se pudo crear la combinación. Inténtalo de nuevo.') }
+    finally { setGenerating(false) }
   }
 
   const handleSave = async () => {
     const outfit = results?.outfits[currentIdx]
     if (!outfit) return
     setSaving(true)
-    const res = await saveOutfit(user.id, outfit.prendaIds, ocasion || 'casual', !!aiResponse)
+    const res = await saveOutfit(user.id, outfit.prendaIds, outfit.ocasion, outfit.generado_por_ia)
     if (res?.error) toast.error('Error al guardar')
     else toast.success('¡Outfit guardado!')
     setSaving(false)
@@ -152,10 +145,11 @@ export default function OutfitGeneratorPage() {
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Cpu className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-text">Motor de sugerencias</span>
+            <span className="text-sm font-medium text-text">Personalizar con IA</span>
           </div>
           <button
             onClick={() => setUseAI(!useAI)}
+            role="switch" aria-checked={useAI} aria-label="Personalizar con IA"
             className={`
               relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300 cursor-pointer
               ${useAI ? 'bg-primary' : 'bg-border'}
@@ -170,7 +164,7 @@ export default function OutfitGeneratorPage() {
         <div className="flex items-center gap-2 px-1 -mt-2">
           {useAI ? (
             <span className="text-xs text-primary font-medium flex items-center gap-1">
-              <Zap className="w-3 h-3" /> IA activada (Llama 3.3 70B)
+              <Zap className="w-3 h-3" /> Tiene en cuenta tu estilo y lo que necesitas hoy
             </span>
           ) : (
             <span className="text-xs text-text-muted font-medium">Reglas inteligentes (local)</span>
@@ -189,7 +183,7 @@ export default function OutfitGeneratorPage() {
           </div>
         </div>
 
-        {!useAI && (
+        {(
           <div>
             <p className="text-xs font-medium text-text-muted mb-2 uppercase tracking-wider">Temporada</p>
             <div className="flex flex-wrap gap-2">
@@ -203,6 +197,13 @@ export default function OutfitGeneratorPage() {
           </div>
         )}
 
+        {useAI && <label className="block text-sm text-text-secondary">
+          ¿Qué necesitas hoy?
+          <textarea value={contexto} onChange={event => setContexto(event.target.value)} maxLength={500} rows={2}
+            placeholder="Por ejemplo: oficina informal, caminar mucho y llevar una chamarra ligera."
+            className="mt-2 w-full rounded-xl border border-border bg-bg p-3 text-text focus:ring-2 focus:ring-primary/30" />
+          <span className="text-xs text-text-muted">Usaremos solo prendas disponibles de tu clóset.</span>
+        </label>}
         <Button onClick={handleGenerate} loading={generating} icon={useAI ? Zap : Sparkles} className="w-full" size="lg">
           {useAI ? 'Generar con IA' : 'Generar outfit'}
         </Button>
@@ -238,7 +239,7 @@ export default function OutfitGeneratorPage() {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-text">Tu outfit</h3>
                     <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-success-light text-success">
-                      {Math.round(currentOutfit.score * 100)}% compatible
+                      {currentOutfit.generado_por_ia ? 'Personalizado con IA' : 'Combinación local'}
                     </span>
                   </div>
 
@@ -247,7 +248,7 @@ export default function OutfitGeneratorPage() {
                     {currentOutfit.items.map((item) => (
                       <div key={item.id} className="text-center">
                         <div className="aspect-square rounded-xl overflow-hidden bg-bg-alt border border-border mb-2">
-                          <img src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" />
+                          <PrivateImage src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" />
                         </div>
                         <p className="text-xs font-medium text-text truncate">{item.subcategoria || CATEGORIAS[item.categoria]?.label}</p>
                         <p className="text-[10px] text-text-muted">{CATEGORIAS[item.categoria]?.label}</p>

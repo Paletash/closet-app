@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { useClothingStore } from './useClothingStore'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 export const useMarketplaceStore = create((set) => ({
   loading: false,

@@ -1,3 +1,4 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useEffect } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useOutfitStore } from '../store/useOutfitStore'
@@ -6,7 +7,7 @@ import { CATEGORIAS, OCASIONES } from '../utils/categories'
 import { formatDate } from '../utils/helpers'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 import ShareOutfitButton from '../components/outfit/ShareOutfitButton'
 
 export default function SavedOutfitsPage() {
@@ -63,7 +64,7 @@ export default function SavedOutfitsPage() {
                 <div className="grid grid-cols-3 gap-2">
                   {(outfit.prendas || []).slice(0, 6).map((prenda) => (
                     <div key={prenda.id} className="aspect-square rounded-xl overflow-hidden bg-bg-alt border border-border">
-                      <img src={prenda.foto_url} alt={prenda.subcategoria} className="w-full h-full object-cover" loading="lazy" />
+                      <PrivateImage src={prenda.foto_url} alt={prenda.subcategoria} className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   ))}
                 </div>

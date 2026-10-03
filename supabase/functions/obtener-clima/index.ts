@@ -2,6 +2,7 @@
 // supabase/functions/obtener-clima/index.ts
 // Edge Function: Obtiene el clima actual usando OpenWeatherMap API
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { requireUser, readJson, enforceQuota, failure, HttpError } from '../_shared/http.ts'
 
 // Declare Deno to satisfy TypeScript language server in any IDE configuration
 declare const Deno: any;
@@ -18,7 +19,10 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { lat, lon } = await req.json()
+    const user = await requireUser(req)
+    const { lat, lon } = await readJson(req, 1024)
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new HttpError(400, 'Coordenadas inválidas.')
+    await enforceQuota(user, 'obtener-clima')
 
     if (lat === undefined || lon === undefined) {
       return new Response(
@@ -44,7 +48,7 @@ serve(async (req: Request) => {
 
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=es&appid=${API_KEY}`
 
-    const response = await fetch(url)
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) })
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -75,11 +79,7 @@ serve(async (req: Request) => {
     )
 
   } catch (error: any) {
-    console.error('Edge function error:', error)
-    return new Response(
-      JSON.stringify({ error: error?.message || 'Error interno' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return failure(error)
   }
 })
 

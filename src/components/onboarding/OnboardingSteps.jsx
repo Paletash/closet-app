@@ -1,36 +1,42 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/useAuthStore'
-import { Shirt, Sparkles, ChevronRight, Check, Camera, Compass } from 'lucide-react'
+import { Shirt, Sparkles, ChevronRight, Check, Camera } from 'lucide-react'
 import Button from '../ui/Button'
-import { toast } from '../ui/Toast'
+import { toast } from '../../lib/toast'
 import { ESTILOS } from '../../utils/categories'
 
 const steps = ['Bienvenida', 'Estilo', 'Listo']
 
 export default function OnboardingSteps() {
   const [step, setStep] = useState(0)
-  const [selectedEstilo, setSelectedEstilo] = useState('')
+  const [selectedEstilos, setSelectedEstilos] = useState([])
+  const [saving, setSaving] = useState(false)
   const { profile, updateProfile } = useAuthStore()
   const navigate = useNavigate()
 
   const handleComplete = async () => {
+    if (saving) return
+    setSaving(true)
     const result = await updateProfile({
-      estilo: selectedEstilo || null,
+      estilo: selectedEstilos[0] || null,
+      estilos_favoritos: selectedEstilos,
       onboarding_completado: true,
     })
 
     if (result?.error) {
+      setSaving(false)
       toast.error('Error al guardar perfil')
       return
     }
 
     toast.success('¡Todo listo! Bienvenido a OutfitMe')
-    navigate('/')
+    navigate('/closet/add')
   }
 
   const handleSkip = async () => {
-    await updateProfile({ onboarding_completado: true })
+    const result = await updateProfile({ onboarding_completado: true })
+    if (result?.error) return toast.error('No se pudo guardar. Inténtalo de nuevo.')
     navigate('/')
   }
 
@@ -94,36 +100,37 @@ export default function OnboardingSteps() {
               ¿Cuál es tu estilo?
             </h2>
             <p className="text-text-secondary mb-8">
-              Esto nos ayuda a darte mejores sugerencias
+              Puedes elegir más de uno y cambiarlos después
             </p>
 
             <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto mb-10">
               {ESTILOS.map(({ value, label, icon }) => (
                 <button
                   key={value}
-                  onClick={() => setSelectedEstilo(value)}
+                  onClick={() => setSelectedEstilos(current => current.includes(value) ? current.filter(style => style !== value) : [...current, value])}
+                  aria-pressed={selectedEstilos.includes(value)}
                   className={`
                     p-5 rounded-2xl border-2 transition-all duration-200
                     flex flex-col items-center gap-3 cursor-pointer
                     hover:scale-[1.02] active:scale-[0.98]
-                    ${selectedEstilo === value
+                    ${selectedEstilos.includes(value)
                       ? 'border-primary bg-primary/5 shadow-sm'
                       : 'border-border bg-surface hover:border-border/80'
                     }
                   `}
                 >
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
-                    selectedEstilo === value ? 'bg-primary/10 text-primary' : 'bg-bg-alt text-text-secondary'
+                    selectedEstilos.includes(value) ? 'bg-primary/10 text-primary' : 'bg-bg-alt text-text-secondary'
                   }`}>
                     {/* Cloned React icon to adjust classes dynamically */}
                     {React.cloneElement(icon, { className: 'w-6 h-6 m-0' })}
                   </div>
                   <span className={`text-sm font-semibold ${
-                    selectedEstilo === value ? 'text-primary' : 'text-text'
+                    selectedEstilos.includes(value) ? 'text-primary' : 'text-text'
                   }`}>
                     {label}
                   </span>
-                  {selectedEstilo === value && (
+                  {selectedEstilos.includes(value) && (
                     <Check className="w-4 h-4 text-primary mt-1" />
                   )}
                 </button>
@@ -154,13 +161,13 @@ export default function OnboardingSteps() {
               ¡Todo listo!
             </h2>
             <p className="text-text-secondary mb-10 max-w-sm mx-auto">
-              Tu closet está listo. Empieza subiendo tu primera prenda
-              para comenzar a crear outfits increíbles.
+              Empieza con tres fotos: una prenda superior, una inferior y un par de zapatos.
+              Con eso puedes crear y guardar tu primera combinación.
             </p>
 
             <div className="flex flex-col gap-2 max-w-xs mx-auto">
-              <Button onClick={handleComplete} size="lg" className="w-full">
-                Ir a mi closet
+              <Button onClick={handleComplete} loading={saving} size="lg" className="w-full">
+                Subir mis primeras prendas
               </Button>
             </div>
           </div>

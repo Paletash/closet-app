@@ -57,7 +57,7 @@ export default function NotificationPrompt() {
         <div className="flex-1 pt-1">
           <h3 className="font-bold text-text text-sm mb-1">Activa las notificaciones</h3>
           <p className="text-xs text-text-secondary mb-3 pr-4">
-            ¿Quieres recibir sugerencias de outfit cada mañana basadas en el clima? 🌤️
+            Recibe un recordatorio del clima entre las 7 y las 9 mientras tengas abierto el inicio de OutfitMe.
           </p>
           
           <div className="flex gap-2">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import PrivateImage from '../ui/PrivateImage'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Home, ShirtIcon, PlusCircle, Sparkles, BarChart3, CalendarDays, Luggage, Heart, Camera, User, LogOut, Settings, Box } from 'lucide-react'
 import { useAuthStore } from '../../store/useAuthStore'
@@ -60,7 +60,7 @@ export default function Sidebar() {
           >
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden group-hover:bg-primary/20 transition-colors">
               {profile?.foto_url ? (
-                <img src={profile.foto_url} alt={displayName} className="w-full h-full object-cover" />
+                <PrivateImage src={profile.foto_url} alt={displayName} className="w-full h-full object-cover" />
               ) : (
                 <User className="w-4 h-4 text-primary" />
               )}

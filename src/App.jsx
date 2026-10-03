@@ -27,6 +27,7 @@ const WishlistPage = lazy(() => import('./pages/WishlistPage'))
 const LookDelDiaPage = lazy(() => import('./pages/LookDelDiaPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
 
 function OnboardingGuard({ children }) {
   const { profile, loading } = useAuthStore()
@@ -42,11 +43,13 @@ export default function App() {
 
   useEffect(() => {
     let subscription
+    let disposed = false
     const init = async () => {
       subscription = await initialize()
+      if (disposed) subscription?.unsubscribe?.()
     }
     init()
-    return () => subscription?.unsubscribe?.()
+    return () => { disposed = true; subscription?.unsubscribe?.() }
   }, [initialize])
 
   if (loading) {
@@ -63,6 +66,7 @@ export default function App() {
       <Suspense fallback={<div className="min-h-dvh flex items-center justify-center bg-bg"><LoadingSpinner size="lg" text="Cargando módulo..." /></div>}>
         <Routes>
           {/* Public routes */}
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/login" element={session ? <Navigate to="/" replace /> : <LoginPage />} />
           <Route path="/register" element={session ? <Navigate to="/" replace /> : <RegisterPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />

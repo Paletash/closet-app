@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 
 const CACHE_KEY = 'outfitme_weather'
@@ -41,6 +41,7 @@ export function useWeather() {
 
     setLoading(true)
     setError(null)
+    setLocationDenied(false)
 
     try {
       // Get user's location
@@ -79,13 +80,6 @@ export function useWeather() {
       setLoading(false)
     }
   }, [])
-
-  useEffect(() => {
-    // Auto-fetch on mount if no cache
-    if (!weather && !locationDenied) {
-      fetchWeather()
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { weather, loading, error, locationDenied, refetch: () => fetchWeather(true) }
 }

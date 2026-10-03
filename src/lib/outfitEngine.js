@@ -4,7 +4,8 @@ import {
   ocasionToEstilos,
   subcategoriaClash,
   subcategoriaSynergy,
-} from '../utils/colors'
+} from '../utils/colors.js'
+import { eligibleClothes } from './outfitValidation.js'
 
 /**
  * OutfitEngine v3.0 - Motor Profesional de Combinación de Outfits
@@ -143,7 +144,7 @@ function hasSubcategoriaClash(items) {
  * Evalúa si el outfit es apropiado para la temperatura actual
  */
 function scoreClimate(items, weather) {
-  if (!weather?.temperatura) return 0.5
+  if (!Number.isFinite(weather?.temperatura)) return 0.5
 
   const temp = weather.temperatura
   const hasJacket = items.some(i => i.categoria === 'chamarra')
@@ -562,7 +563,10 @@ export function generateOutfits(clothes, params = {}, count = 3, weather = null)
   const { ocasion, temporada } = params
 
   // Filter clothes
-  let filtered = [...clothes]
+  let filtered = eligibleClothes(clothes).map(item => ({
+    ...item,
+    subcategoria: item.subcategoria ? item.subcategoria[0].toUpperCase() + item.subcategoria.slice(1).toLowerCase() : '',
+  }))
   if (temporada) filtered = filterBySeason(filtered, temporada)
   if (ocasion) filtered = filterByOcasion(filtered, ocasion)
 

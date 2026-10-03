@@ -1,3 +1,4 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
@@ -9,6 +10,7 @@ import { getGreeting } from '../utils/helpers'
 import { CATEGORIAS } from '../utils/categories'
 import WeatherCard from '../components/weather/WeatherCard'
 import NotificationPrompt from '../components/ui/NotificationPrompt'
+import ActivationCard from '../components/closet/ActivationCard'
 import { startNotificationScheduler, stopNotificationScheduler } from '../utils/notificationScheduler'
 
 export default function DashboardPage() {
@@ -48,6 +50,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Weather Widget & Notifications */}
+      <ActivationCard />
       <div className="mb-6 space-y-3">
         <WeatherCard
           weather={weather}
@@ -158,7 +161,7 @@ export default function DashboardPage() {
                 className="group bg-surface rounded-2xl border border-border overflow-hidden hover:shadow-md transition-all"
               >
                 <div className="aspect-square overflow-hidden bg-bg-alt">
-                  <img
+                  <PrivateImage
                     src={item.foto_url}
                     alt={item.subcategoria || item.categoria}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

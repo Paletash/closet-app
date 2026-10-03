@@ -1,3 +1,4 @@
+import PrivateImage from '../ui/PrivateImage'
 import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CATEGORIAS, COLORES } from '../../utils/categories'
@@ -36,7 +37,7 @@ const ClothingCard = memo(function ClothingCard({ item }) {
     >
       {/* Image */}
       <div className="aspect-square overflow-hidden bg-bg-alt relative">
-        <img
+        <PrivateImage
           src={item.foto_url}
           alt={item.subcategoria || item.categoria}
           className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${isDirty ? 'opacity-50 grayscale-[40%]' : ''}`}

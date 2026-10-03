@@ -43,7 +43,10 @@ export const useOutfitStore = create((set, get) => ({
     set({ outfits: outfitsWithPrendas, loading: false, hasFetched: true })
   },
 
-  saveOutfit: async (userId, prendaIds, ocasion, generadoPorIA = false) => {
+  saveOutfit: async (userId, prendaIds, ocasion, generadoPorIA = false, favorito = false) => {
+    if (typeof userId !== 'string' || !Array.isArray(prendaIds) || prendaIds.length < 3) {
+      return { error: new Error('Faltan datos para guardar el outfit.') }
+    }
     set({ loading: true, error: null })
 
     try {
@@ -54,7 +57,7 @@ export const useOutfitStore = create((set, get) => ({
           user_id: userId,
           ocasion,
           generado_por_ia: generadoPorIA,
-          es_favorito: false,
+          es_favorito: favorito,
         })
         .select()
         .single()
@@ -71,10 +74,13 @@ export const useOutfitStore = create((set, get) => ({
         .from('outfit_prendas')
         .insert(relations)
 
-      if (relError) throw relError
+      if (relError) {
+        await supabase.from('outfits').delete().eq('id', outfit.id)
+        throw relError
+      }
 
       // Refetch to get full data
-      await get().fetchOutfits(userId)
+      await get().fetchOutfits(userId, true)
 
       set({ loading: false })
       return { data: outfit }

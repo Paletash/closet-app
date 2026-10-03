@@ -1,3 +1,4 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
@@ -290,7 +291,7 @@ export default function StatsPage() {
                     to={`/closet/${item.id}`}
                     className="shrink-0 w-14 h-14 rounded-xl overflow-hidden bg-bg-alt border border-border hover:border-primary/40 transition-colors"
                   >
-                    <img src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" loading="lazy" />
+                    <PrivateImage src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" loading="lazy" />
                   </Link>
                 ))}
                 {stats.neverUsed.length > 8 && (
@@ -333,7 +334,7 @@ export default function StatsPage() {
               <div className="space-y-3">
                 {bestRentable.length > 0 ? bestRentable.map(item => (
                   <Link key={item.id} to={`/closet/${item.id}`} className="flex items-center gap-3 p-2 hover:bg-bg-alt rounded-xl transition-colors">
-                    <img src={item.foto_url} className="w-12 h-12 rounded-lg object-cover bg-border" alt={item.subcategoria} />
+                    <PrivateImage src={item.foto_url} className="w-12 h-12 rounded-lg object-cover bg-border" alt={item.subcategoria} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-text truncate">{item.marca || item.subcategoria}</p>
                       <p className="text-xs text-text-muted">{item.veces_usado} usos</p>
@@ -356,7 +357,7 @@ export default function StatsPage() {
               <div className="space-y-3">
                 {worstRentable.length > 0 ? worstRentable.map(item => (
                   <Link key={item.id} to={`/closet/${item.id}`} className="flex items-center gap-3 p-2 hover:bg-bg-alt rounded-xl transition-colors">
-                    <img src={item.foto_url} className="w-12 h-12 rounded-lg object-cover bg-border" alt={item.subcategoria} />
+                    <PrivateImage src={item.foto_url} className="w-12 h-12 rounded-lg object-cover bg-border" alt={item.subcategoria} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-text truncate">{item.marca || item.subcategoria}</p>
                       <p className="text-xs text-text-muted">{item.veces_usado || 0} usos</p>

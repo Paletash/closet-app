@@ -1,3 +1,4 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
@@ -13,7 +14,7 @@ import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 function getDaysDiff(start, end) {
   const s = new Date(start)
@@ -47,7 +48,7 @@ export default function TripDetailPage() {
   }, [tripId, user?.id, fetchTrip, fetchClothes])
 
   const trip = currentTrip
-  const prendas = trip?.prendas || []
+  const prendas = useMemo(() => trip?.prendas || [], [trip?.prendas])
   const packedCount = prendas.filter((p) => p.empacado).length
   const totalCount = prendas.length
   const progress = totalCount > 0 ? Math.round((packedCount / totalCount) * 100) : 0
@@ -230,7 +231,7 @@ export default function TripDetailPage() {
 
                       {/* Photo */}
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-bg-alt border border-border shrink-0">
-                        <img src={prenda.foto_url} alt={prenda.subcategoria} className="w-full h-full object-cover" loading="lazy" />
+                        <PrivateImage src={prenda.foto_url} alt={prenda.subcategoria} className="w-full h-full object-cover" loading="lazy" />
                       </div>
 
                       {/* Info */}
@@ -294,7 +295,7 @@ export default function TripDetailPage() {
                   <div className="grid grid-cols-3 gap-1.5">
                     {outfit.items.map((item) => (
                       <div key={item.id} className="aspect-square rounded-lg overflow-hidden bg-bg-alt border border-border">
-                        <img src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" loading="lazy" />
+                        <PrivateImage src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" loading="lazy" />
                       </div>
                     ))}
                   </div>
@@ -348,7 +349,7 @@ export default function TripDetailPage() {
                 className="group text-left bg-bg rounded-xl border border-border overflow-hidden hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer"
               >
                 <div className="aspect-square overflow-hidden bg-bg-alt relative">
-                  <img src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                  <PrivateImage src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                   <div className="absolute inset-0 bg-primary/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Plus className="w-6 h-6 text-white drop-shadow-md" />
                   </div>

@@ -1,3 +1,4 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useLookStore } from '../store/useLookStore'
@@ -7,7 +8,7 @@ import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 function formatDateFull(dateStr) {
   if (!dateStr) return ''
@@ -40,10 +41,14 @@ export default function LookDelDiaPage() {
   const handleFileChange = async (e) => {
     const f = e.target.files?.[0]
     if (!f) return
-    const compressed = await compressImage(f, 1200, 0.85)
-    setFile(compressed)
-    setPreview(URL.createObjectURL(compressed))
+    try {
+      const compressed = await compressImage(f, 1200, 0.85)
+      setFile(compressed)
+      setPreview(URL.createObjectURL(compressed))
+    } catch (error) { toast.error(error.message) }
   }
+
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview) }, [preview])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -65,6 +70,7 @@ export default function LookDelDiaPage() {
     const res = await deleteLook(id)
     if (res?.success) {
       toast.success('Look eliminado')
+      if (res.warning) toast.error(res.warning, 8000)
       setViewLook(null)
     } else {
       toast.error('Error al eliminar')
@@ -129,7 +135,7 @@ export default function LookDelDiaPage() {
               className="group bg-surface rounded-2xl border border-border overflow-hidden hover:shadow-md transition-all cursor-pointer text-left"
             >
               <div className="aspect-[3/4] overflow-hidden bg-bg-alt relative">
-                <img
+                <PrivateImage
                   src={look.foto_url}
                   alt={`Look ${look.fecha}`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -177,7 +183,7 @@ export default function LookDelDiaPage() {
           <div>
             {preview ? (
               <div className="relative">
-                <img
+                <PrivateImage
                   src={preview}
                   alt="Preview"
                   className="w-full aspect-[3/4] object-cover rounded-2xl border border-border"
@@ -252,7 +258,7 @@ export default function LookDelDiaPage() {
       >
         {viewLook && (
           <div className="space-y-4">
-            <img
+            <PrivateImage
               src={viewLook.foto_url}
               alt={`Look ${viewLook.fecha}`}
               className="w-full aspect-[3/4] object-cover rounded-2xl"

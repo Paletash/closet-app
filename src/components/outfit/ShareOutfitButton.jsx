@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Share2, Loader2, Download } from 'lucide-react'
+import { Share2, Loader2 } from 'lucide-react'
 import Button from '../ui/Button'
-import { toast } from '../ui/Toast'
+import { toast } from '../../lib/toast'
 import { generateOutfitCollage, shareOutfitCollage } from '../../utils/outfitCollage'
 
 export default function ShareOutfitButton({ prendas, ocasion, className = '' }) {

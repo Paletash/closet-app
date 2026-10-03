@@ -1,3 +1,4 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useWishlistStore } from '../store/useWishlistStore'
@@ -11,7 +12,7 @@ import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 const PRIORIDADES = [
   { value: 'alta', label: 'Alta', color: 'bg-error-light text-error', dot: 'bg-error' },
@@ -201,7 +202,7 @@ export default function WishlistPage() {
                   {/* Image or placeholder */}
                   <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-bg-alt border border-border shrink-0 flex items-center justify-center">
                     {item.imagen_url ? (
-                      <img src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" loading="lazy" />
+                      <PrivateImage src={item.imagen_url} alt={item.nombre} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
                       <ShoppingBag className="w-6 h-6 text-text-muted" />
                     )}

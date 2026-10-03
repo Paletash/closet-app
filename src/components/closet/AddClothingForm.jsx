@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import PrivateImage from '../ui/PrivateImage'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/useAuthStore'
 import { useClothingStore } from '../../store/useClothingStore'
@@ -8,7 +9,7 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Select from '../ui/Select'
 import TagInput from '../ui/TagInput'
-import { toast } from '../ui/Toast'
+import { toast } from '../../lib/toast'
 import { compressImage, createPreviewUrl, revokePreviewUrl } from '../../utils/helpers'
 import { CATEGORIAS, SUBCATEGORIAS, COLORES, ESTILOS, TEMPORADAS } from '../../utils/categories'
 
@@ -38,6 +39,8 @@ export default function AddClothingForm() {
   const [preview, setPreview] = useState(null)
   const [classifying, setClassifying] = useState(false)
   const [classified, setClassified] = useState(false)
+  const [queue, setQueue] = useState([])
+  const [processing, setProcessing] = useState(false)
   const [form, setForm] = useState({
     categoria: '',
     subcategoria: '',
@@ -52,19 +55,23 @@ export default function AddClothingForm() {
 
   // Extract unique tags from current clothes
   const existingTags = [...new Set(useClothingStore.getState().clothes.flatMap(c => c.etiquetas || []))]
+  useEffect(() => () => { if (preview) revokePreviewUrl(preview) }, [preview])
 
   const handleImageChange = async (e) => {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files || [])
+    const file = files[0]
     if (!file) return
-
-    // Compress image
-    const compressed = await compressImage(file)
-    setImageFile(compressed)
-    setClassified(false)
-
-    // Preview
-    if (preview) revokePreviewUrl(preview)
-    setPreview(createPreviewUrl(compressed))
+    if (files.length > 20) return toast.error('Puedes seleccionar hasta 20 fotos por lote.')
+    if (files.some(photo => !photo.type.startsWith('image/') || photo.size > 10 * 1024 * 1024)) return toast.error('Cada foto debe ser una imagen de hasta 10 MB.')
+    setProcessing(true)
+    try {
+      const compressed = await compressImage(file)
+      setImageFile(compressed)
+      setClassified(false)
+      setQueue(files.slice(1))
+      setPreview(createPreviewUrl(compressed))
+    } catch (error) { toast.error(error.message) }
+    finally { setProcessing(false) }
   }
 
   const removeImage = () => {
@@ -72,6 +79,7 @@ export default function AddClothingForm() {
     setPreview(null)
     setImageFile(null)
     setClassified(false)
+    setQueue([])
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -79,7 +87,7 @@ export default function AddClothingForm() {
    * AI Vision Classification — sends the image to the Edge Function
    */
   const handleClassify = async () => {
-    if (!imageFile) return
+    if (!imageFile || classifying || loading || processing) return
 
     setClassifying(true)
     try {
@@ -88,7 +96,8 @@ export default function AddClothingForm() {
 
       // Call Edge Function
       const { data, error } = await supabase.functions.invoke('clasificar-prenda', {
-        body: { imagen_base64: base64 },
+        body: { imagen_base64: base64, mime_type: imageFile.type },
+        timeout: 45000,
       })
 
       if (error) throw error
@@ -156,6 +165,7 @@ export default function AddClothingForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (loading || classifying || processing) return
 
     if (!imageFile) {
       toast.error('Sube una foto de tu prenda')
@@ -166,8 +176,6 @@ export default function AddClothingForm() {
       return
     }
 
-    console.log('Submitting clothing with form data:', JSON.stringify(form))
-    console.log('Image file:', imageFile?.name, imageFile?.size, imageFile?.type)
 
     try {
       toast.info('Subiendo prenda...', 2000)
@@ -188,14 +196,28 @@ export default function AddClothingForm() {
         imageFile
       )
 
-      console.log('addClothing result:', result)
 
       if (result?.error) {
         console.error('addClothing returned error:', result.error)
         toast.error(`Error al subir la prenda: ${result.error?.message || 'Error desconocido'}`)
       } else {
         toast.success('¡Prenda agregada!')
-        navigate('/closet')
+        if (queue.length) {
+          setProcessing(true)
+          const [next, ...rest] = queue
+          // Clear the saved photo before preparing the next one so retry cannot duplicate it.
+          setImageFile(null)
+          setPreview(null)
+          setQueue(rest)
+          setForm({ categoria: '', subcategoria: '', color_principal: '', estilos: [], temporadas: [], marca: '', precio: '', notas: '', etiquetas: [] })
+          setClassified(false)
+          try {
+            const compressed = await compressImage(next)
+            setImageFile(compressed)
+            setPreview(createPreviewUrl(compressed))
+          } catch (error) { toast.error(error.message); setQueue([]) }
+          finally { setProcessing(false) }
+        } else navigate('/closet')
       }
     } catch (err) {
       console.error('handleSubmit exception:', err)
@@ -209,12 +231,15 @@ export default function AddClothingForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 animate-slide-up">
+      <p className="text-sm text-text-secondary">Una foto por prenda. Puedes elegir hasta 20 y revisar cada una antes de guardarla.</p>
+      {queue.length > 0 && <p role="status" className="text-sm text-primary">Después de esta quedan {queue.length} fotos por revisar.</p>}
+      {processing && <p role="status" className="text-sm text-primary">Preparando la foto…</p>}
       {/* Image upload */}
       <div>
         <p className="text-sm font-medium text-text-secondary mb-2">Foto de la prenda *</p>
         {preview ? (
           <div className="relative w-full max-w-xs">
-            <img
+            <PrivateImage
               src={preview}
               alt="Preview"
               className="w-full aspect-square object-cover rounded-2xl border border-border"
@@ -222,6 +247,7 @@ export default function AddClothingForm() {
             <button
               type="button"
               onClick={removeImage}
+              disabled={classifying || loading || processing} aria-label="Quitar foto y cancelar lote"
               className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -232,7 +258,7 @@ export default function AddClothingForm() {
               <button
                 type="button"
                 onClick={handleClassify}
-                disabled={classifying}
+                disabled={classifying || loading || processing}
                 className={`
                   mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl
                   text-sm font-semibold transition-all cursor-pointer
@@ -273,6 +299,7 @@ export default function AddClothingForm() {
                 type="file"
                 accept="image/*"
                 capture="environment"
+                disabled={processing || loading || classifying}
                 onChange={handleImageChange}
                 className="hidden"
               />
@@ -286,6 +313,7 @@ export default function AddClothingForm() {
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple disabled={processing || loading || classifying}
                 accept="image/*"
                 onChange={handleImageChange}
                 className="hidden"
@@ -433,8 +461,8 @@ export default function AddClothingForm() {
       />
 
       {/* Submit */}
-      <Button type="submit" loading={loading} className="w-full" size="lg">
-        Agregar prenda
+      <Button type="submit" loading={loading || processing} disabled={classifying} className="w-full" size="lg">
+        {queue.length ? 'Guardar y revisar la siguiente' : 'Guardar prenda'}
       </Button>
     </form>
   )

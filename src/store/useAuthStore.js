@@ -1,5 +1,23 @@
 import { create } from 'zustand'
-import { supabase } from '../lib/supabase'
+import { supabase, cancelSessionRequests } from '../lib/supabase'
+import { clearPrivateMedia, deletePhoto } from '../lib/privateMedia'
+import { mediaReference } from '../lib/mediaReference'
+import { clearPersonalCaches } from '../lib/sessionCleanup'
+import { useClothingStore } from './useClothingStore'
+import { useOutfitStore } from './useOutfitStore'
+import { useCalendarStore } from './useCalendarStore'
+import { useLookStore } from './useLookStore'
+import { useTripStore } from './useTripStore'
+import { useWishlistStore } from './useWishlistStore'
+
+function resetPersonalData() {
+  cancelSessionRequests()
+  clearPrivateMedia()
+  for (const store of [useClothingStore, useOutfitStore, useCalendarStore, useLookStore, useTripStore, useWishlistStore]) {
+    store.setState(store.getInitialState(), true)
+  }
+  void clearPersonalCaches().catch(() => {})
+}
 
 export const useAuthStore = create((set, get) => ({
   session: null,
@@ -24,13 +42,14 @@ export const useAuthStore = create((set, get) => ({
 
       // Listen for auth changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (_event, session) => {
-          set({ session, user: session?.user ?? null })
-          if (session?.user) {
-            await get().fetchProfile(session.user.id)
-          } else {
-            set({ profile: null })
-          }
+        (_event, session) => {
+          const changed = get().user?.id !== session?.user?.id
+          if (changed) resetPersonalData()
+          set({ session, user: session?.user ?? null, ...(changed ? { profile: null } : {}) })
+          // Avoid awaiting Supabase requests while its auth callback holds the lock.
+          if (session?.user) setTimeout(() => {
+            if (get().user?.id === session.user.id) void get().fetchProfile(session.user.id)
+          }, 0)
         }
       )
 
@@ -48,6 +67,8 @@ export const useAuthStore = create((set, get) => ({
       .select('*')
       .eq('id', userId)
       .maybeSingle()
+
+    if (get().user?.id !== userId) return
 
     if (error) {
       console.error('Error fetching profile:', error)
@@ -76,13 +97,13 @@ export const useAuthStore = create((set, get) => ({
             .select('*')
             .eq('id', userId)
             .maybeSingle()
-          set({ profile: refetchedProfile })
+          if (get().user?.id === userId) set({ profile: refetchedProfile })
         } else {
           console.error('Error creating missing profile on-the-fly:', createError)
         }
         return
       }
-      set({ profile: newProfile })
+      if (get().user?.id === userId) set({ profile: newProfile })
     } else {
       set({ profile: data })
     }
@@ -155,8 +176,12 @@ export const useAuthStore = create((set, get) => ({
   },
 
   signOut: async () => {
-    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut({ scope: 'local' })
+    if (error) return { error }
+    resetPersonalData()
+    await clearPersonalCaches().catch(() => {})
     set({ session: null, user: null, profile: null })
+    return { success: true }
   },
 
   updateProfile: async (updates) => {
@@ -185,35 +210,36 @@ export const useAuthStore = create((set, get) => ({
       const userId = get().user?.id
       if (!userId) throw new Error('Usuario no autenticado')
 
-      // Avatars are stored in a dedicated folder for each user (user's UUID) inside the 'avatares' bucket
-      const fileExt = 'jpg'
-      const fileName = `${userId}/avatar.${fileExt}`
+      const previousPhoto = get().profile?.foto_url
+      const fileExt = imageFile.type === 'image/webp' ? 'webp' : 'jpg'
+      const fileName = `${userId}/avatar-${crypto.randomUUID()}.${fileExt}`
 
-      // We'll upload to the dedicated 'avatares' bucket with upsert set to true to replace the old avatar
+      // A new reference also refreshes mounted images without a stale browser cache.
       const { error: uploadError } = await supabase.storage
         .from('avatares')
         .upload(fileName, imageFile, {
-          cacheControl: '3600',
-          upsert: true,
+          cacheControl: '0',
+          contentType: imageFile.type,
+          upsert: false,
         })
 
       if (uploadError) throw uploadError
 
-      const { data: urlData } = supabase.storage
-        .from('avatares')
-        .getPublicUrl(fileName)
-
-      // Update the profile with the new public URL
+      clearPrivateMedia()
       const { data, error: updateError } = await supabase
         .from('profiles')
-        .update({ foto_url: urlData.publicUrl })
+        .update({ foto_url: mediaReference('avatares', fileName) })
         .eq('id', userId)
         .select()
         .single()
 
-      if (updateError) throw updateError
+      if (updateError) {
+        await supabase.storage.from('avatares').remove([fileName])
+        throw updateError
+      }
 
       set({ profile: data, loading: false })
+      try { await deletePhoto(previousPhoto) } catch { return { data, warning: 'Tu foto se actualizó, pero no se pudo borrar la anterior del almacenamiento.' } }
       return { data }
     } catch (error) {
       set({ error: error.message, loading: false })

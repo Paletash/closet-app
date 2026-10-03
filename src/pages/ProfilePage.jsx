@@ -1,14 +1,16 @@
-import { useState, useMemo } from 'react'
+import PrivateImage from '../components/ui/PrivateImage'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 import { ESTILOS, COLORES } from '../utils/categories'
 import { Camera, User, LogOut, ChevronLeft, Bell } from 'lucide-react'
 import { compressImage } from '../utils/helpers'
 import { useNotifications } from '../hooks/useNotifications'
+import AccountDataPanel from '../components/auth/AccountDataPanel'
 
 const TALLAS_SUPERIOR = [
   { value: 'XS', label: 'XS' },
@@ -26,17 +28,16 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
 
-  // Derive initial form from profile — re-create only when profile reference changes
-  const initialForm = useMemo(() => ({
+  // Show a profile that arrives after mount, without overwriting an in-progress edit.
+  const [draft, setForm] = useState(null)
+  const form = draft ?? {
     nombre: profile?.nombre || '',
     estilos_favoritos: profile?.estilos_favoritos || (profile?.estilo ? [profile.estilo] : []),
     colores_favoritos: profile?.colores_favoritos || [],
     talla_superior: profile?.talla_superior || '',
     talla_inferior: profile?.talla_inferior || '',
     talla_calzado: profile?.talla_calzado || '',
-  }), [profile])
-
-  const [form, setForm] = useState(initialForm)
+  }
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0]
@@ -51,6 +52,7 @@ export default function ProfilePage() {
         toast.error('Error al subir la foto de perfil: ' + result.error)
       } else {
         toast.success('¡Foto de perfil actualizada!')
+        if (result.warning) toast.error(result.warning, 8000)
       }
     } catch (err) {
       toast.error('Error al procesar la imagen: ' + err.message)
@@ -86,12 +88,14 @@ export default function ProfilePage() {
   }
 
   const handleLogout = async () => {
-    await signOut()
+    const result = await signOut()
+    if (result?.error) return toast.error('No se pudo cerrar la sesión. Inténtalo de nuevo.')
     navigate('/login')
   }
 
   const toggleColor = (colorValue) => {
-    setForm(prev => {
+    setForm(previous => {
+      const prev = previous ?? form
       const isSelected = prev.colores_favoritos.includes(colorValue)
       if (isSelected) {
         return { ...prev, colores_favoritos: prev.colores_favoritos.filter(c => c !== colorValue) }
@@ -102,7 +106,8 @@ export default function ProfilePage() {
   }
 
   const toggleEstilo = (estiloValue) => {
-    setForm(prev => {
+    setForm(previous => {
+      const prev = previous ?? form
       const isSelected = prev.estilos_favoritos.includes(estiloValue)
       if (isSelected) {
         return { ...prev, estilos_favoritos: prev.estilos_favoritos.filter(e => e !== estiloValue) }
@@ -133,7 +138,7 @@ export default function ProfilePage() {
         <div className="flex flex-col items-center justify-center gap-3">
           <div className="relative group w-28 h-28 rounded-full bg-primary/10 border-2 border-border overflow-hidden flex items-center justify-center shadow-inner">
             {profile?.foto_url ? (
-              <img src={profile.foto_url} alt="Profile" className="w-full h-full object-cover" />
+              <PrivateImage src={profile.foto_url} alt="Profile" className="w-full h-full object-cover" />
             ) : (
               <User className="w-12 h-12 text-primary" />
             )}
@@ -267,7 +272,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-text">Sugerencias mañaneras</p>
-                    <p className="text-xs text-text-muted mt-0.5">Te avisaremos si hace mucho frío o calor (7-9 AM)</p>
+                    <p className="text-xs text-text-muted mt-0.5">De 7 a 9, con el inicio abierto y el clima activado</p>
                   </div>
                 </div>
                 
@@ -307,6 +312,7 @@ export default function ProfilePage() {
           </div>
         </form>
       </div>
+      <AccountDataPanel />
     </div>
   )
 }

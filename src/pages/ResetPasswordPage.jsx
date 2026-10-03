@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/useAuthStore'
 import { Shirt, Eye, EyeOff } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')

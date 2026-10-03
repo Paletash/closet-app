@@ -5,12 +5,15 @@
 /**
  * Loads an image from a URL and returns a Promise that resolves to an HTMLImageElement
  */
-function loadImage(url) {
+import { resolvePhoto } from '../lib/privateMedia'
+
+async function loadImage(reference) {
+  const url = await resolvePhoto(reference)
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.crossOrigin = 'Anonymous'
     img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error(`Failed to load image: ${url}`))
+    img.onerror = () => reject(new Error('No se pudo cargar una foto para compartir.'))
     img.src = url
   })
 }

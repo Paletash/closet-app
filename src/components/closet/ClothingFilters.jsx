@@ -1,5 +1,21 @@
+const FilterChip = ({ label, active, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`
+      px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap
+      transition-all duration-200 cursor-pointer
+      ${active
+        ? 'bg-primary text-white shadow-sm'
+        : 'bg-surface border border-border text-text-secondary hover:border-primary/30 hover:text-text'
+      }
+    `}
+  >
+    {label}
+  </button>
+)
+
 import { X } from 'lucide-react'
-import { CATEGORIAS, COLORES, ESTILOS, TEMPORADAS } from '../../utils/categories'
+import { CATEGORIAS, COLORES, ESTILOS } from '../../utils/categories'
 import { useClothingStore } from '../../store/useClothingStore'
 
 export default function ClothingFilters() {
@@ -9,21 +25,7 @@ export default function ClothingFilters() {
   const existingTags = [...new Set(clothes.flatMap(c => c.etiquetas || []))]
   const dirtyCount = clothes.filter(c => c.sucia === true && (c.estado || 'activa') === 'activa').length
 
-  const FilterChip = ({ label, active, onClick }) => (
-    <button
-      onClick={onClick}
-      className={`
-        px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap
-        transition-all duration-200 cursor-pointer
-        ${active
-          ? 'bg-primary text-white shadow-sm'
-          : 'bg-surface border border-border text-text-secondary hover:border-primary/30 hover:text-text'
-        }
-      `}
-    >
-      {label}
-    </button>
-  )
+
 
   return (
     <div className="space-y-3 mb-6">

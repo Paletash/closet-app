@@ -21,7 +21,11 @@ function supportsWebP() {
  * Resizes to max 800px width at 80% quality
  */
 export function compressImage(file, maxWidth = 800, quality = 0.8) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    if (!file?.type?.startsWith('image/') || file.size > 10 * 1024 * 1024) {
+      reject(new Error('Selecciona una imagen de hasta 10 MB.'))
+      return
+    }
     const reader = new FileReader()
     reader.onload = (e) => {
       const img = new Image()
@@ -29,10 +33,9 @@ export function compressImage(file, maxWidth = 800, quality = 0.8) {
         const canvas = document.createElement('canvas')
         let { width, height } = img
 
-        if (width > maxWidth) {
-          height = (height * maxWidth) / width
-          width = maxWidth
-        }
+        const scale = Math.min(1, maxWidth / Math.max(width, height))
+        width = Math.max(1, Math.round(width * scale))
+        height = Math.max(1, Math.round(height * scale))
 
         canvas.width = width
         canvas.height = height
@@ -46,6 +49,7 @@ export function compressImage(file, maxWidth = 800, quality = 0.8) {
 
         canvas.toBlob(
           (blob) => {
+            if (!blob) return reject(new Error('No se pudo procesar la foto.'))
             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, ext), {
               type: mimeType,
               lastModified: Date.now(),
@@ -56,8 +60,10 @@ export function compressImage(file, maxWidth = 800, quality = 0.8) {
           quality
         )
       }
+      img.onerror = () => reject(new Error('No se pudo abrir la imagen. Prueba con JPG, PNG o WebP.'))
       img.src = e.target.result
     }
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'))
     reader.readAsDataURL(file)
   })
 }

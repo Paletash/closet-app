@@ -138,7 +138,7 @@ export const useCalendarStore = create((set, get) => ({
     }
 
     // Refetch the current month to stay in sync
-    const d = new Date(fecha)
+    const d = new Date(`${fecha}T12:00:00`)
     await get().fetchEntries(userId, d.getFullYear(), d.getMonth() + 1)
 
     set({ loading: false })

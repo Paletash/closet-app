@@ -37,14 +37,13 @@ async function checkAndShowNotification(weather) {
   const currentHour = now.getHours()
   
   // Target time for morning reminder: between 7:00 and 9:00 AM
-  if (currentHour >= 7 && currentHour <= 9) {
+  if (currentHour >= 7 && currentHour < 9) {
     const todayStr = now.toLocaleDateString()
     const lastNotifDate = localStorage.getItem('outfitme_last_morning_notif')
     
     // Only show once per day
     if (lastNotifDate !== todayStr) {
-      showMorningReminder(weather)
-      localStorage.setItem('outfitme_last_morning_notif', todayStr)
+      if (await showMorningReminder(weather)) localStorage.setItem('outfitme_last_morning_notif', todayStr)
     }
   }
 }
@@ -67,7 +66,7 @@ async function showMorningReminder(weather) {
   try {
     const registration = await navigator.serviceWorker?.ready
     if (registration) {
-      registration.showNotification('OutfitMe', {
+      await registration.showNotification('OutfitMe', {
         body,
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-192x192.png',
@@ -81,7 +80,9 @@ async function showMorningReminder(weather) {
         icon: '/icons/icon-192x192.png'
       })
     }
+    return true
   } catch (err) {
     console.error('Error showing notification:', err)
+    return false
   }
 }

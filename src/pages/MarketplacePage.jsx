@@ -1,9 +1,10 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useState, useMemo } from 'react'
 import { Store, Heart, Package, Copy, Check, RotateCcw } from 'lucide-react'
 import { useClothingStore } from '../store/useClothingStore'
 import { useMarketplaceStore } from '../store/useMarketplaceStore'
 import Button from '../components/ui/Button'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 export default function MarketplacePage() {
   const { clothes } = useClothingStore()
@@ -70,7 +71,7 @@ export default function MarketplacePage() {
         {items.map(item => (
           <div key={item.id} className="bg-surface border border-border rounded-2xl overflow-hidden group">
             <div className="aspect-square relative bg-bg-alt">
-              <img src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" />
+              <PrivateImage src={item.foto_url} alt={item.subcategoria} className="w-full h-full object-cover" />
               {activeTab === 'en_venta' && (
                 <div className="absolute top-2 right-2 bg-success text-white px-2 py-1 rounded-lg text-xs font-bold shadow-sm">
                   ${item.precio_venta?.toFixed(2) || '0.00'}
@@ -120,7 +121,7 @@ export default function MarketplacePage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-text flex items-center gap-2">
           <Store className="w-6 h-6 text-primary" />
-          Marketplace & Donaciones
+          Reventa y donación
         </h1>
         <p className="text-sm text-text-muted mt-1">
           Libera espacio en tu clóset vendiendo o donando la ropa que ya no usas.

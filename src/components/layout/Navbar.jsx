@@ -1,3 +1,4 @@
+import PrivateImage from '../ui/PrivateImage'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/useAuthStore'
 import { Shirt, LogOut, Menu, X, User } from 'lucide-react'
@@ -59,7 +60,7 @@ export default function Navbar() {
               >
                 <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
                   {profile?.foto_url ? (
-                    <img src={profile.foto_url} alt={displayName} className="w-full h-full object-cover" />
+                    <PrivateImage src={profile.foto_url} alt={displayName} className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-3.5 h-3.5 text-primary" />
                   )}

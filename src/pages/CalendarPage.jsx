@@ -1,3 +1,4 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useState, useEffect, useMemo } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useOutfitStore } from '../store/useOutfitStore'
@@ -9,7 +10,7 @@ import Modal from '../components/ui/Modal'
 import Button from '../components/ui/Button'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 const DAYS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 const MONTHS_ES = [
@@ -108,7 +109,7 @@ export default function CalendarPage() {
   }
 
   const selectedDateStr = selectedDay ? toISODate(year, month, selectedDay) : null
-  const selectedEntries = selectedDateStr ? (entriesByDate[selectedDateStr] || []) : []
+  const selectedEntries = useMemo(() => selectedDateStr ? (entriesByDate[selectedDateStr] || []) : [], [selectedDateStr, entriesByDate])
 
   const handleLogOutfit = async (outfitId) => {
     if (!user?.id || !selectedDateStr) return
@@ -323,7 +324,7 @@ export default function CalendarPage() {
                     <div className="grid grid-cols-4 md:grid-cols-5 gap-2">
                       {(outfit.prendas || []).slice(0, 5).map((prenda) => (
                         <div key={prenda.id} className="aspect-square rounded-xl overflow-hidden bg-bg-alt border border-border">
-                          <img
+                          <PrivateImage
                             src={prenda.foto_url}
                             alt={prenda.subcategoria || CATEGORIAS[prenda.categoria]?.label}
                             className="w-full h-full object-cover"
@@ -397,7 +398,7 @@ export default function CalendarPage() {
                       <div className="flex overflow-x-auto pb-2 gap-3 snap-x scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
                         {(outfit.prendas || []).map((prenda) => (
                           <div key={prenda.id} className="w-24 h-24 shrink-0 snap-start rounded-xl overflow-hidden bg-bg-alt border border-border">
-                            <img
+                            <PrivateImage
                               src={prenda.foto_url}
                               alt={prenda.subcategoria || CATEGORIAS[prenda.categoria]?.label}
                               className="w-full h-full object-cover"
@@ -463,7 +464,7 @@ export default function CalendarPage() {
                   <div className="grid grid-cols-4 gap-1.5">
                     {(outfit.prendas || []).slice(0, 4).map((prenda) => (
                       <div key={prenda.id} className="aspect-square rounded-lg overflow-hidden bg-bg-alt border border-border">
-                        <img
+                        <PrivateImage
                           src={prenda.foto_url}
                           alt={prenda.subcategoria}
                           className="w-full h-full object-cover"

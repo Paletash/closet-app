@@ -37,7 +37,7 @@ export function generateCapsule(clothes, options = {}) {
   const { targetSize = 30, temporada = null } = options
   
   // Filtrar por temporada si se especifica
-  let available = clothes
+  let available = clothes.filter(item => (item.estado || 'activa') === 'activa')
   if (temporada) {
     available = available.filter(item => 
       !item.temporadas?.length || 

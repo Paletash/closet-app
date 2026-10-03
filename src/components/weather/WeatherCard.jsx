@@ -1,19 +1,16 @@
-import { Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Wind, Droplets, MapPin, RefreshCw, CloudFog } from 'lucide-react'
+import { Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Droplets, MapPin, RefreshCw, CloudFog } from 'lucide-react'
 
 /**
  * Map OpenWeatherMap icon codes to Lucide icons
  */
-function getWeatherIcon(iconId) {
-  if (!iconId) return Sun
-  // iconId is the weather condition id (e.g., 200-series = thunderstorm)
-  if (iconId >= 200 && iconId < 300) return CloudLightning
-  if (iconId >= 300 && iconId < 400) return CloudDrizzle
-  if (iconId >= 500 && iconId < 600) return CloudRain
-  if (iconId >= 600 && iconId < 700) return CloudSnow
-  if (iconId >= 700 && iconId < 800) return CloudFog
-  if (iconId === 800) return Sun
-  if (iconId > 800) return Cloud
-  return Sun
+function WeatherIcon({ iconId, className }) {
+  if (iconId >= 200 && iconId < 300) return <CloudLightning className={className} />
+  if (iconId >= 300 && iconId < 400) return <CloudDrizzle className={className} />
+  if (iconId >= 500 && iconId < 600) return <CloudRain className={className} />
+  if (iconId >= 600 && iconId < 700) return <CloudSnow className={className} />
+  if (iconId >= 700 && iconId < 800) return <CloudFog className={className} />
+  if (iconId > 800) return <Cloud className={className} />
+  return <Sun className={className} />
 }
 
 function getWeatherGradient(iconId) {
@@ -64,16 +61,17 @@ export default function WeatherCard({ weather, loading, error, locationDenied, o
     )
   }
 
-  if (!weather) return null
+  if (!weather) return <button onClick={onRefresh} className="w-full p-4 text-left bg-surface border border-border rounded-2xl text-sm text-primary">
+    Usar mi ubicación para adaptar el outfit al clima
+  </button>
 
-  const WeatherIcon = getWeatherIcon(weather.icono_id)
   const gradient = getWeatherGradient(weather.icono_id)
 
   if (compact) {
     return (
       <div className="flex items-center gap-2 text-sm">
         <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-          <WeatherIcon className="w-4 h-4 text-white" />
+          <WeatherIcon iconId={weather.icono_id} className="w-4 h-4 text-white" />
         </div>
         <span className="font-semibold text-text">{weather.temperatura}°C</span>
         <span className="text-text-muted text-xs capitalize">{weather.descripcion}</span>
@@ -86,7 +84,7 @@ export default function WeatherCard({ weather, loading, error, locationDenied, o
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm`}>
-            <WeatherIcon className="w-6 h-6 text-white" />
+            <WeatherIcon iconId={weather.icono_id} className="w-6 h-6 text-white" />
           </div>
           <div>
             <div className="flex items-baseline gap-1.5">

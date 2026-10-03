@@ -1,10 +1,11 @@
+import PrivateImage from '../ui/PrivateImage'
 import { useState, useRef } from 'react'
-import { Camera, Upload, X, Loader, Sparkles } from 'lucide-react'
+import { Camera, Upload, X, Sparkles } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useClothingStore } from '../../store/useClothingStore'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
-import { toast } from '../ui/Toast'
+import { toast } from '../../lib/toast'
 import { compressImage, createPreviewUrl, revokePreviewUrl } from '../../utils/helpers'
 
 function fileToBase64(file) {
@@ -27,11 +28,12 @@ export default function VisualSearchModal({ isOpen, onClose }) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const compressed = await compressImage(file)
-    setImageFile(compressed)
-
-    if (preview) revokePreviewUrl(preview)
-    setPreview(createPreviewUrl(compressed))
+    try {
+      const compressed = await compressImage(file)
+      setImageFile(compressed)
+      if (preview) revokePreviewUrl(preview)
+      setPreview(createPreviewUrl(compressed))
+    } catch (error) { toast.error(error.message) }
   }
 
   const handleRemoveImage = () => {
@@ -49,12 +51,13 @@ export default function VisualSearchModal({ isOpen, onClose }) {
       const base64 = await fileToBase64(imageFile)
 
       const { data, error } = await supabase.functions.invoke('analizar-inspiracion', {
-        body: { imagen_base64: base64 },
+        body: { imagen_base64: base64, mime_type: imageFile.type },
+        timeout: 45000,
       })
 
       if (error) throw error
       if (data?.error) throw new Error(data.error)
-      if (!data?.prendas_detectadas || data.prendas_detectadas.length === 0) {
+      if (!Array.isArray(data?.prendas_detectadas) || data.prendas_detectadas.length === 0) {
         toast.error('No pudimos detectar prendas en la imagen')
         setAnalyzing(false)
         return
@@ -96,7 +99,7 @@ export default function VisualSearchModal({ isOpen, onClose }) {
           </div>
         ) : (
           <div className="relative w-full aspect-square md:aspect-video rounded-2xl border border-border overflow-hidden bg-bg-alt">
-            <img src={preview} alt="Preview" className="w-full h-full object-contain" />
+            <PrivateImage src={preview} alt="Preview" className="w-full h-full object-contain" />
             <button
               onClick={handleRemoveImage}
               className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors cursor-pointer"

@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import PrivateImage from '../components/ui/PrivateImage'
+import { useState, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useClothingStore } from '../store/useClothingStore'
 import { useMarketplaceStore } from '../store/useMarketplaceStore'
@@ -11,7 +12,7 @@ import Select from '../components/ui/Select'
 import Input from '../components/ui/Input'
 import TagInput from '../components/ui/TagInput'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 export default function ClothingDetailPage() {
   const { id } = useParams()
@@ -71,6 +72,7 @@ export default function ClothingDetailPage() {
       const result = await deleteClothing(item.id)
       if (result?.success) {
         toast.success('Prenda eliminada')
+        if (result.warning) toast.error(result.warning, 8000)
         navigate('/closet')
       } else {
         toast.error(result?.error?.message || 'Error al eliminar')
@@ -167,7 +169,7 @@ export default function ClothingDetailPage() {
 
       <div className="md:flex md:gap-6">
         <div className="md:w-1/2 mb-6 md:mb-0">
-          <img src={item.foto_url} alt={item.subcategoria || item.categoria} className="w-full aspect-square object-cover rounded-2xl border border-border" />
+          <PrivateImage src={item.foto_url} alt={item.subcategoria || item.categoria} className="w-full aspect-square object-cover rounded-2xl border border-border" />
         </div>
         <div className="md:w-1/2 space-y-4">
           <div>

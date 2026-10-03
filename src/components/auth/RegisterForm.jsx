@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/useAuthStore'
 import { Shirt, Eye, EyeOff } from 'lucide-react'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
-import { toast } from '../ui/Toast'
+import { toast } from '../../lib/toast'
 
 export default function RegisterForm() {
   const [nombre, setNombre] = useState('')
@@ -36,6 +36,9 @@ export default function RegisterForm() {
     const result = await signUp(email, password, nombre)
     if (result?.error) {
       toast.error(result.error.message || 'Error al crear cuenta')
+    } else if (!result?.data?.session) {
+      toast.info('Revisa tu correo para confirmar la cuenta antes de iniciar sesión.', 8000)
+      navigate('/login')
     } else {
       toast.success('¡Cuenta creada! Bienvenido a OutfitMe')
       navigate('/onboarding')
@@ -136,6 +139,7 @@ export default function RegisterForm() {
               Inicia sesión
             </Link>
           </p>
+          <p className="text-center text-xs text-text-muted mt-4"><Link to="/privacy" className="underline">Cómo usamos tus datos</Link></p>
         </div>
       </div>
     </div>

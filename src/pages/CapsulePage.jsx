@@ -1,3 +1,4 @@
+import PrivateImage from '../components/ui/PrivateImage'
 import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { Box, SlidersHorizontal, Info, Shuffle, Layers } from 'lucide-react'
@@ -150,7 +151,7 @@ export default function CapsulePage() {
                         to={`/closet/${item.id}`}
                         className="group relative aspect-square bg-bg-alt rounded-xl border border-border overflow-hidden hover:border-primary transition-colors"
                       >
-                        <img 
+                        <PrivateImage
                           src={item.foto_url} 
                           alt={item.subcategoria} 
                           className="w-full h-full object-cover"
@@ -178,7 +179,7 @@ export default function CapsulePage() {
               <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar">
                 {result.excluded.map(item => (
                   <div key={item.id} className="w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-border opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-                    <img src={item.foto_url} alt="" className="w-full h-full object-cover" />
+                    <PrivateImage src={item.foto_url} alt="" className="w-full h-full object-cover" />
                   </div>
                 ))}
               </div>

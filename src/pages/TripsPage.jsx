@@ -8,7 +8,7 @@ import Input from '../components/ui/Input'
 import Modal from '../components/ui/Modal'
 import EmptyState from '../components/ui/EmptyState'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
-import { toast } from '../components/ui/Toast'
+import { toast } from '../lib/toast'
 
 function getDaysDiff(start, end) {
   const s = new Date(start)

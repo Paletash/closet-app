@@ -48,6 +48,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['/sw-cleanup.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
@@ -78,39 +79,6 @@ export default defineConfig({
               cacheableResponse: {
                 statuses: [0, 200],
               },
-            },
-          },
-          {
-            // Supabase Storage images (clothing photos, avatars) — GET only
-            urlPattern: ({ request, url }) =>
-              request.method === 'GET' &&
-              /\.supabase\.co\/storage\/v1\/object\/public\//i.test(url.href),
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'supabase-images',
-              expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            // Supabase REST API calls (profiles, prendas, outfits)
-            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60, // 1 hour
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-              networkTimeoutSeconds: 10,
             },
           },
         ],

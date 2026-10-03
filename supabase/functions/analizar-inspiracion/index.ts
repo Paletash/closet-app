@@ -2,6 +2,8 @@
 // supabase/functions/analizar-inspiracion/index.ts
 // Edge Function: Analiza una foto de inspiración y extrae categorías, colores y estilos
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { requireUser, readJson, enforceQuota, failure, HttpError } from '../_shared/http.ts'
+import { validateInspiration } from '../_shared/visionValidation.js'
 
 // Declare Deno to satisfy TypeScript language server in any IDE configuration
 declare const Deno: any;
@@ -17,7 +19,10 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { imagen_base64 } = await req.json()
+    const user = await requireUser(req)
+    const { imagen_base64, mime_type = 'image/jpeg' } = await readJson(req)
+    if (typeof imagen_base64 !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(imagen_base64) || !['image/jpeg','image/png','image/webp'].includes(mime_type)) throw new HttpError(400, 'Imagen inválida.')
+    await enforceQuota(user, 'analizar-inspiracion')
 
     if (!imagen_base64) {
       return new Response(
@@ -69,9 +74,8 @@ Responde ÚNICAMENTE con un JSON válido, siguiendo esta estructura exacta:
 }`
 
     const models = [
-      "openrouter/free",
-      "meta-llama/llama-3.2-11b-vision-instruct:free",
-      "qwen/qwen2.5-vl-72b-instruct:free"
+      ...(Deno.env.get('OPENROUTER_VISION_MODEL') ? [Deno.env.get('OPENROUTER_VISION_MODEL')] : []),
+      "openrouter/free"
     ]
 
     let response = null
@@ -82,6 +86,7 @@ Responde ÚNICAMENTE con un JSON válido, siguiendo esta estructura exacta:
       try {
         const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
+          signal: AbortSignal.timeout(12000),
           headers: {
             "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
             "Content-Type": "application/json",
@@ -98,7 +103,7 @@ Responde ÚNICAMENTE con un JSON válido, siguiendo esta estructura exacta:
                   {
                     type: "image_url",
                     image_url: {
-                      url: `data:image/jpeg;base64,${imagen_base64}`
+                      url: `data:${mime_type};base64,${imagen_base64}`
                     }
                   }
                 ]
@@ -114,8 +119,8 @@ Responde ÚNICAMENTE con un JSON válido, siguiendo esta estructura exacta:
           successfulModel = model
           break
         } else {
-          const errText = await res.text()
-          lastError = `Modelo ${model} devolvió estado ${res.status}: ${errText}`
+          await res.body?.cancel()
+          lastError = `Modelo ${model} devolvió estado ${res.status}`
           console.warn(lastError)
         }
       } catch (err: any) {
@@ -126,7 +131,7 @@ Responde ÚNICAMENTE con un JSON válido, siguiendo esta estructura exacta:
 
     if (!response) {
       return new Response(
-        JSON.stringify({ error: `No se pudo analizar la foto. Errores: ${lastError}` }),
+        JSON.stringify({ error: 'No se pudo analizar la foto. Inténtalo de nuevo.' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -153,14 +158,11 @@ Responde ÚNICAMENTE con un JSON válido, siguiendo esta estructura exacta:
     }
 
     return new Response(
-      JSON.stringify(resultado),
+      JSON.stringify(validateInspiration(resultado)),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error: any) {
-    return new Response(
-      JSON.stringify({ error: `Error interno: ${error?.message || error}` }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    return failure(error)
   }
 })

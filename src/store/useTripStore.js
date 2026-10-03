@@ -106,7 +106,7 @@ export const useTripStore = create((set, get) => ({
     }
 
     // Refetch all trips
-    await get().fetchTrips(userId)
+    await get().fetchTrips(userId, true)
     set({ loading: false })
     return { data }
   },

@@ -12,7 +12,6 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
 export default function ClosetPage() {
   const { user } = useAuthStore()
   const { clothes, loading, fetchClothes, getFilteredClothes } = useClothingStore()
-  const filters = useClothingStore((state) => state.filters)
   const [showFilters, setShowFilters] = useState(false)
   const [showVisualSearch, setShowVisualSearch] = useState(false)
 
@@ -20,7 +19,7 @@ export default function ClosetPage() {
     if (user?.id) fetchClothes(user.id)
   }, [user?.id, fetchClothes])
 
-  const filtered = useMemo(() => getFilteredClothes(), [clothes, filters])
+  const filtered = getFilteredClothes()
   const dirtyCount = useMemo(() => clothes.filter(c => c.sucia === true && (c.estado || 'activa') === 'activa').length, [clothes])
 
   if (loading && clothes.length === 0) {
